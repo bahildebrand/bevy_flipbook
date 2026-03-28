@@ -6,13 +6,13 @@
 
 struct VatSettings {
     bounds_min: vec3<f32>,
-    total_frames: f32,
+    frame_count: u32,       // total animation frames (from remap_info "Frames")
     bounds_max: vec3<f32>,
+    y_resolution: f32,      // actual texture pixel height (frame_count * 2 for pos+normals)
     fps: f32,
     current_time: f32,
     clip_start_frame: f32,
     clip_frame_count: f32,
-    _padding: f32,
 }
 
 @group(#{MATERIAL_BIND_GROUP}) @binding(100) var vat_texture: texture_2d<f32>;
@@ -30,13 +30,37 @@ struct Vertex {
 
 @vertex
 fn vertex(in: Vertex) -> VertexOutput {
-    let frame = vat.clip_start_frame + (vat.current_time * vat.fps % vat.clip_frame_count);
-    let vat_uv = vec2<f32>(in.uv_vat.x, (frame + 0.5) / vat.total_frames);
+    // Compute which frame to sample, looping within the clip
+    let elapsed_frames = vat.current_time * vat.fps;
+    let frame = vat.clip_start_frame + (elapsed_frames % vat.clip_frame_count);
 
-    let encoded = textureSampleLevel(vat_texture, vat_sampler, vat_uv, 0.0);
+    let curr_frame = floor(frame);
+    // Wrap next frame within the clip, not the whole texture
+    let next_in_clip = (curr_frame - vat.clip_start_frame + 1.0) % vat.clip_frame_count;
+    let next_frame = vat.clip_start_frame + next_in_clip;
+    let blend = fract(frame);
 
-    // Decode normalized [0,1] back to object-space position
-    let animated_position = vat.bounds_min + encoded.xyz * (vat.bounds_max - vat.bounds_min);
+    let frame_step = 1.0 / vat.y_resolution;
+    // Sample at pixel centers (+0.5) to avoid bleeding into adjacent rows
+    let uv_curr = vec2<f32>(in.uv_vat.x, (curr_frame + 0.5) * frame_step);
+    let uv_next = vec2<f32>(in.uv_vat.x, (next_frame + 0.5) * frame_step);
+
+    let encoded_curr = textureSampleLevel(vat_texture, vat_sampler, uv_curr, 0.0).rgb;
+    let encoded_next = textureSampleLevel(vat_texture, vat_sampler, uv_next, 0.0).rgb;
+    let encoded = mix(encoded_curr, encoded_next, blend);
+
+    // Decode normalized [0,1] back to object-space offset
+    let range = vat.bounds_max - vat.bounds_min;
+    let blender_offset = vat.bounds_min + encoded * range;
+
+    // Blender (Z-up RH) -> Bevy (Y-up RH):
+    //   Bevy.x =  Blender.x  (R)
+    //   Bevy.y =  Blender.z  (B)
+    //   Bevy.z = -Blender.y  (-G)
+    let offset = vec3<f32>(blender_offset.x, blender_offset.z, -blender_offset.y);
+
+    // VAT stores offsets from rest pose
+    let animated_position = in.position + offset;
 
     let world_from_local = mesh_functions::get_world_from_local(in.instance_index);
 

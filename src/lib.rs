@@ -45,11 +45,13 @@ impl MaterialExtension for VatMaterialExtension {
 #[derive(ShaderType, Debug, Clone)]
 pub struct VatSettings {
     pub bounds_min: Vec3,
-    pub total_frames: f32,
+    /// Total animation frames from remap_info "Frames" field.
+    pub frame_count: u32,
     pub bounds_max: Vec3,
+    /// Actual texture pixel height (frame_count * 2 for pos+normals in one texture).
+    pub y_resolution: f32,
     pub fps: f32,
     pub current_time: f32,
     pub clip_start_frame: f32,
     pub clip_frame_count: f32,
-    pub _padding: f32,
 }

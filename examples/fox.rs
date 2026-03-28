@@ -4,6 +4,23 @@ use bevy_openvat::{VatMaterial, VatMaterialExtension, VatPlugin, VatSettings};
 #[derive(Resource)]
 struct FoxMaterial(Handle<VatMaterial>);
 
+// Fox animation clips from fox-remap_info.json
+#[derive(Clone, Copy)]
+enum FoxClip { Survey, Walk, Run }
+
+impl FoxClip {
+    fn start_frame(self) -> f32 {
+        // Skip NLA overlap frames (82 and 99 are blended transition frames)
+        match self { Self::Survey => 0.0, Self::Walk => 83.0, Self::Run => 100.0 }
+    }
+    fn frame_count(self) -> f32 {
+        match self { Self::Survey => 82.0, Self::Walk => 16.0, Self::Run => 28.0 }
+    }
+    fn name(self) -> &'static str {
+        match self { Self::Survey => "Survey (1)", Self::Walk => "Walk (2)", Self::Run => "Run (3)" }
+    }
+}
+
 #[derive(Component)]
 struct OrbitCamera {
     yaw: f32,
@@ -28,7 +45,7 @@ fn main() {
             VatPlugin,
         ))
         .add_systems(Startup, setup)
-        .add_systems(Update, (replace_materials, orbit_camera))
+        .add_systems(Update, (replace_materials, orbit_camera, switch_clip))
         .run();
 }
 
@@ -48,14 +65,15 @@ fn setup(
         extension: VatMaterialExtension {
             vat_texture,
             settings: VatSettings {
-                bounds_min: Vec3::new(-9.0, -22.5, -4.2),
-                bounds_max: Vec3::new(54.6, 20.0, 9.2),
-                total_frames: 250.0,
+                bounds_min: Vec3::new(-8.0, -46.2, -18.5),
+                bounds_max: Vec3::new(55.1, 52.0, 54.7),
+                // remap_info "Frames": 128, texture height = 256 (pos + normals)
+                frame_count: 128,
+                y_resolution: 256.0,
                 fps: 30.0,
                 current_time: 0.0,
-                clip_start_frame: 1.0,
+                clip_start_frame: 0.0,
                 clip_frame_count: 82.0,
-                _padding: 0.0,
             },
         },
     });
@@ -76,6 +94,7 @@ fn setup(
 ///   Arrow Left/Right — orbit horizontally
 ///   Arrow Up/Down   — orbit vertically
 ///   Z / X           — zoom in / out
+///   1 / 2 / 3       — switch animation clip (Survey / Walk / Run)
 fn orbit_camera(
     keys: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
@@ -110,5 +129,30 @@ fn replace_materials(
             .entity(entity)
             .remove::<MeshMaterial3d<StandardMaterial>>()
             .insert(MeshMaterial3d(fox_material.0.clone()));
+    }
+}
+
+fn switch_clip(
+    keys: Res<ButtonInput<KeyCode>>,
+    fox_material: Res<FoxMaterial>,
+    mut vat_materials: ResMut<Assets<VatMaterial>>,
+) {
+    let clip = if keys.just_pressed(KeyCode::Digit1) {
+        Some(FoxClip::Survey)
+    } else if keys.just_pressed(KeyCode::Digit2) {
+        Some(FoxClip::Walk)
+    } else if keys.just_pressed(KeyCode::Digit3) {
+        Some(FoxClip::Run)
+    } else {
+        None
+    };
+
+    if let Some(clip) = clip {
+        if let Some(mat) = vat_materials.get_mut(&fox_material.0) {
+            mat.extension.settings.clip_start_frame = clip.start_frame();
+            mat.extension.settings.clip_frame_count = clip.frame_count();
+            mat.extension.settings.current_time = 0.0;
+            info!("Switched to clip: {}", clip.name());
+        }
     }
 }
