@@ -51,6 +51,13 @@ fn vertex(in: Vertex) -> VertexOutput {
     let encoded_next = textureSampleLevel(vat_texture, vat_sampler, uv_next, 0.0).rgb;
     let encoded = mix(encoded_curr, encoded_next, blend);
 
+    // Normals are packed in the bottom half of the texture (V + 0.5)
+    let norm_curr = textureSampleLevel(vat_texture, vat_sampler, uv_curr + vec2<f32>(0.0, 0.5), 0.0).rgb;
+    let norm_next = textureSampleLevel(vat_texture, vat_sampler, uv_next + vec2<f32>(0.0, 0.5), 0.0).rgb;
+    // Decode [0,1] -> [-1,1] and apply same Blender->Bevy axis swap
+    var n = normalize(mix(norm_curr, norm_next, blend) * 2.0 - 1.0);
+    let animated_normal = vec3<f32>(n.x, n.z, -n.y);
+
     // Decode normalized [0,1] back to object-space offset
     let range = vat.bounds_max - vat.bounds_min;
     let blender_offset = vat.bounds_min + encoded * range;
@@ -72,7 +79,7 @@ fn vertex(in: Vertex) -> VertexOutput {
         vec4<f32>(animated_position, 1.0),
     );
     out.position = position_world_to_clip(out.world_position.xyz);
-    out.world_normal = mesh_functions::mesh_normal_local_to_world(in.normal, in.instance_index);
+    out.world_normal = mesh_functions::mesh_normal_local_to_world(animated_normal, in.instance_index);
 
 #ifdef VERTEX_UVS_A
     out.uv = in.uv;
