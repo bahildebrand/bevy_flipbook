@@ -9,17 +9,7 @@ pub struct VatPlugin;
 
 impl Plugin for VatPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(MaterialPlugin::<VatMaterial>::default())
-            .add_systems(Update, tick_vat_time);
-    }
-}
-
-fn tick_vat_time(
-    time: Res<Time>,
-    mut vat_materials: ResMut<Assets<VatMaterial>>,
-) {
-    for (_, mat) in vat_materials.iter_mut() {
-        mat.extension.settings.current_time += time.delta_secs();
+        app.add_plugins(MaterialPlugin::<VatMaterial>::default());
     }
 }
 
@@ -51,7 +41,8 @@ pub struct VatSettings {
     /// Actual texture pixel height (frame_count * 2 for pos+normals in one texture).
     pub y_resolution: f32,
     pub fps: f32,
-    pub current_time: f32,
+    /// Global time when the current clip started — shader computes elapsed as globals.time - time_offset.
+    pub time_offset: f32,
     pub clip_start_frame: f32,
     pub clip_frame_count: f32,
 }

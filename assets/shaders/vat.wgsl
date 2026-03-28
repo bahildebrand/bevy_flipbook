@@ -2,6 +2,7 @@
     mesh_functions,
     view_transformations::position_world_to_clip,
     forward_io::VertexOutput,
+    mesh_view_bindings::globals,
 }
 
 struct VatSettings {
@@ -10,7 +11,8 @@ struct VatSettings {
     bounds_max: vec3<f32>,
     y_resolution: f32,      // actual texture pixel height (frame_count * 2 for pos+normals)
     fps: f32,
-    current_time: f32,
+    /// Global time when the current clip started — shader computes elapsed as globals.time - time_offset.
+    time_offset: f32,
     clip_start_frame: f32,
     clip_frame_count: f32,
 }
@@ -31,7 +33,7 @@ struct Vertex {
 @vertex
 fn vertex(in: Vertex) -> VertexOutput {
     // Compute which frame to sample, looping within the clip
-    let elapsed_frames = vat.current_time * vat.fps;
+    let elapsed_frames = (globals.time - vat.time_offset) * vat.fps;
     let frame = vat.clip_start_frame + (elapsed_frames % vat.clip_frame_count);
 
     let curr_frame = floor(frame);

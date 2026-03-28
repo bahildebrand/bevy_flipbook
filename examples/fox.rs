@@ -71,7 +71,7 @@ fn setup(
                 frame_count: 128,
                 y_resolution: 256.0,
                 fps: 30.0,
-                current_time: 0.0,
+                time_offset: 0.0,
                 clip_start_frame: 0.0,
                 clip_frame_count: 82.0,
             },
@@ -134,6 +134,7 @@ fn replace_materials(
 
 fn switch_clip(
     keys: Res<ButtonInput<KeyCode>>,
+    time: Res<Time>,
     fox_material: Res<FoxMaterial>,
     mut vat_materials: ResMut<Assets<VatMaterial>>,
 ) {
@@ -151,7 +152,7 @@ fn switch_clip(
         if let Some(mat) = vat_materials.get_mut(&fox_material.0) {
             mat.extension.settings.clip_start_frame = clip.start_frame();
             mat.extension.settings.clip_frame_count = clip.frame_count();
-            mat.extension.settings.current_time = 0.0;
+            mat.extension.settings.time_offset = time.elapsed_secs();
             info!("Switched to clip: {}", clip.name());
         }
     }
