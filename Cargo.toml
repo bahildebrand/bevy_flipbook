@@ -1,0 +1,16 @@
+[package]
+name = "bevy_openvat"
+version = "0.1.0"
+edition = "2024"
+description = "OpenVAT vertex animation texture rendering for Bevy"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+bevy = { version = "0.18", default-features = false }
+
+[dev-dependencies]
+bevy = { version = "0.18", features = ["exr"] }
+
+[[example]]
+name = "fox"
+path = "examples/fox.rs"
