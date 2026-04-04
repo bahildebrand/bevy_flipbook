@@ -5,6 +5,10 @@ use bevy::{
     shader::ShaderRef,
 };
 
+pub fn vat_vertex_shader() -> ShaderRef {
+    "shaders/vat.wgsl".into()
+}
+
 pub struct VatPlugin;
 
 impl Plugin for VatPlugin {
