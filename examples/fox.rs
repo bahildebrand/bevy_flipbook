@@ -1,10 +1,11 @@
 use bevy::{
+    mesh::MeshTag,
     pbr::ExtendedMaterial,
     prelude::*,
     render::storage::ShaderStorageBuffer,
 };
 use bevy_flipbook::{
-    remap_info::RemapInfo, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings,
+    remap_info::RemapInfo, VatHandler, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings,
 };
 
 const REMAP_INFO_JSON: &str =
@@ -69,7 +70,6 @@ fn setup(
     let vat_texture = asset_server.load("models/fox_vat.exr");
 
     let os = &remap_info.0.os_remap;
-    // Start on the first clip ordered by start_frame.
     let first = remap_info
         .0
         .clips_ordered()
@@ -77,10 +77,7 @@ fn setup(
         .next()
         .expect("remap_info has no animations");
 
-    let slots = buffers.add(ShaderStorageBuffer::new(
-        &[0u8; 4],
-        default(),
-    ));
+    let slots = buffers.add(ShaderStorageBuffer::new(&[0u8; 4], default()));
 
     let material = vat_materials.add(ExtendedMaterial {
         base: StandardMaterial {
@@ -166,12 +163,23 @@ fn replace_materials(
     mut commands: Commands,
     query: Query<Entity, Added<MeshMaterial3d<StandardMaterial>>>,
     fox_material: Res<FoxMaterial>,
+    remap_info: Res<FoxRemapInfo>,
+    mut vat_handler: ResMut<VatHandler>,
 ) {
+    let first = remap_info
+        .0
+        .clips_ordered()
+        .into_iter()
+        .next()
+        .expect("remap_info has no animations");
+
     for entity in &query {
+        let slot_id = vat_handler.allocate_slot(fox_material.0.clone());
+        vat_handler.update_slot(fox_material.0.clone(), slot_id, 0.0, first.1.clone());
         commands
             .entity(entity)
             .remove::<MeshMaterial3d<StandardMaterial>>()
-            .insert(MeshMaterial3d(fox_material.0.clone()));
+            .insert((MeshMaterial3d(fox_material.0.clone()), MeshTag(slot_id)));
     }
 }
 
@@ -180,7 +188,8 @@ fn switch_clip(
     time: Res<Time>,
     fox_material: Res<FoxMaterial>,
     remap_info: Res<FoxRemapInfo>,
-    mut vat_materials: ResMut<Assets<VatMaterial>>,
+    mesh_tags: Query<&MeshTag>,
+    mut vat_handler: ResMut<VatHandler>,
 ) {
     const DIGIT_KEYS: &[KeyCode] = &[
         KeyCode::Digit1,
@@ -202,12 +211,14 @@ fn switch_clip(
         .and_then(|(i, _)| clips.get(i).copied());
 
     if let Some((name, clip)) = selected {
-        if let Some(mat) = vat_materials.get_mut(&fox_material.0) {
-            mat.extension.settings.clip_start_frame = clip.start_frame as f32;
-            mat.extension.settings.clip_frame_count = clip.frame_count() as f32;
-            mat.extension.settings.fps = clip.framerate;
-            mat.extension.settings.time_offset = time.elapsed_secs();
-            info!("Switched to clip: {name}");
+        for tag in &mesh_tags {
+            vat_handler.update_slot(
+                fox_material.0.clone(),
+                tag.0,
+                time.elapsed_secs(),
+                clip.clone(),
+            );
         }
+        info!("Switched to clip: {name}");
     }
 }

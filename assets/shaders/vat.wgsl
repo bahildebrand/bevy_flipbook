@@ -41,14 +41,22 @@ struct Vertex {
 
 @vertex
 fn vertex(in: Vertex) -> VertexOutput {
+    let tag = mesh_functions::get_tag(in.instance_index);
+    let slot = slots[tag];
+
+    let start_frame = slot.clip_start_frame;
+    let frame_count = slot.clip_frame_count;
+    let time_offset = slot.time_offset;
+
     // Compute which frame to sample, looping within the clip
-    let elapsed_frames = (globals.time - vat.time_offset) * vat.fps;
-    let frame = vat.clip_start_frame + (elapsed_frames % vat.clip_frame_count);
+    let elapsed_frames = (globals.time - time_offset) * vat.fps;
+
+    let frame = start_frame + (elapsed_frames % frame_count);
 
     let curr_frame = floor(frame);
     // Wrap next frame within the clip, not the whole texture
-    let next_in_clip = (curr_frame - vat.clip_start_frame + 1.0) % vat.clip_frame_count;
-    let next_frame = vat.clip_start_frame + next_in_clip;
+    let next_in_clip = (curr_frame - start_frame + 1.0) % frame_count;
+    let next_frame = start_frame + next_in_clip;
     let blend = fract(frame);
 
     let frame_step = 1.0 / vat.y_resolution;
