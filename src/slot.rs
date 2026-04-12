@@ -4,7 +4,7 @@ use std::collections::HashMap;
 
 use crate::{VatMaterial, remap_info::AnimationClip, slot::allocator::SlotAllocator};
 
-use bevy::prelude::*;
+use bevy::{prelude::*, render::render_resource::ShaderType};
 
 #[derive(Default)]
 pub(crate) struct VatSlotBuffers {
@@ -19,6 +19,8 @@ impl VatSlotBuffers {
 
         let slot = VatSlot::default();
         buffer.buffer.push(slot);
+
+        buffer.dirty = true;
 
         slot_id
     }
@@ -37,6 +39,20 @@ impl VatSlotBuffers {
         slot.time_offset = time_offset;
         slot.clip_start_frame = animation_clip.start_frame as f32;
         slot.clip_frame_count = animation_clip.frame_count() as f32;
+
+        buffer.dirty = true;
+    }
+
+    pub fn dirty_buffer_iter(
+        &mut self,
+    ) -> impl Iterator<Item = (&Handle<VatMaterial>, &Vec<VatSlot>)> {
+        self.buffers
+            .iter_mut()
+            .filter(|(_, buffer)| buffer.dirty)
+            .map(|(handle, buffer)| {
+                buffer.dirty = false;
+                (handle, &buffer.buffer)
+            })
     }
 }
 
@@ -44,9 +60,10 @@ impl VatSlotBuffers {
 struct VatSlotBuffer {
     buffer: Vec<VatSlot>,
     allocator: SlotAllocator,
+    dirty: bool,
 }
 
-#[derive(Default)]
+#[derive(Default, ShaderType, Clone)]
 pub(crate) struct VatSlot {
     pub time_offset: f32,
     pub clip_start_frame: f32,
