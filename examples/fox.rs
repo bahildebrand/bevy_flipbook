@@ -1,4 +1,8 @@
-use bevy::{pbr::ExtendedMaterial, prelude::*};
+use bevy::{
+    pbr::ExtendedMaterial,
+    prelude::*,
+    render::storage::ShaderStorageBuffer,
+};
 use bevy_flipbook::{
     remap_info::RemapInfo, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings,
 };
@@ -55,6 +59,7 @@ fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut vat_materials: ResMut<Assets<VatMaterial>>,
+    mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
     remap_info: Res<FoxRemapInfo>,
 ) {
     commands.spawn(SceneRoot(
@@ -72,14 +77,19 @@ fn setup(
         .next()
         .expect("remap_info has no animations");
 
+    let slots = buffers.add(ShaderStorageBuffer::new(
+        &[0u8; 4],
+        default(),
+    ));
+
     let material = vat_materials.add(ExtendedMaterial {
         base: StandardMaterial {
             base_color: Color::srgb(0.8, 0.7, 0.5),
             ..default()
         },
-        extension: VatMaterialExtension {
+        extension: VatMaterialExtension::new(
             vat_texture,
-            settings: VatSettings {
+            VatSettings {
                 bounds_min: Vec3::from(os.min),
                 bounds_max: Vec3::from(os.max),
                 frame_count: os.frames,
@@ -89,7 +99,8 @@ fn setup(
                 clip_start_frame: first.1.start_frame as f32,
                 clip_frame_count: first.1.frame_count() as f32,
             },
-        },
+            slots,
+        ),
     });
 
     commands.insert_resource(FoxMaterial(material));
