@@ -1,4 +1,5 @@
 mod slot;
+pub mod remap_info;
 
 use bevy::{
     pbr::{ExtendedMaterial, MaterialExtension},

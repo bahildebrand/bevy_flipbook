@@ -1,41 +1,19 @@
 use bevy::{pbr::ExtendedMaterial, prelude::*};
-use bevy_flipbook::{VatMaterial, VatMaterialExtension, VatPlugin, VatSettings};
+use bevy_flipbook::{
+    remap_info::RemapInfo, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings,
+};
+
+const REMAP_INFO_JSON: &str =
+    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/models/fox-remap_info.json"));
+
+// Texture height is frame_count * 2 because positions and normals are packed into one texture.
+const Y_RESOLUTION_MULTIPLIER: f32 = 2.0;
 
 #[derive(Resource)]
 struct FoxMaterial(Handle<VatMaterial>);
 
-// Fox animation clips from fox-remap_info.json
-#[derive(Clone, Copy)]
-enum FoxClip {
-    Survey,
-    Walk,
-    Run,
-}
-
-impl FoxClip {
-    fn start_frame(self) -> f32 {
-        // Skip NLA overlap frames (82 and 99 are blended transition frames)
-        match self {
-            Self::Survey => 0.0,
-            Self::Walk => 83.0,
-            Self::Run => 100.0,
-        }
-    }
-    fn frame_count(self) -> f32 {
-        match self {
-            Self::Survey => 82.0,
-            Self::Walk => 16.0,
-            Self::Run => 28.0,
-        }
-    }
-    fn name(self) -> &'static str {
-        match self {
-            Self::Survey => "Survey (1)",
-            Self::Walk => "Walk (2)",
-            Self::Run => "Run (3)",
-        }
-    }
-}
+#[derive(Resource)]
+struct FoxRemapInfo(RemapInfo);
 
 #[derive(Component)]
 struct OrbitCamera {
@@ -57,6 +35,8 @@ impl Default for OrbitCamera {
 }
 
 fn main() {
+    let remap_info = RemapInfo::from_json(REMAP_INFO_JSON).expect("failed to parse remap_info.json");
+
     App::new()
         .add_plugins((
             DefaultPlugins.set(AssetPlugin {
@@ -65,6 +45,7 @@ fn main() {
             }),
             VatPlugin,
         ))
+        .insert_resource(FoxRemapInfo(remap_info))
         .add_systems(Startup, setup)
         .add_systems(Update, (replace_materials, orbit_camera, switch_clip))
         .run();
@@ -74,12 +55,22 @@ fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut vat_materials: ResMut<Assets<VatMaterial>>,
+    remap_info: Res<FoxRemapInfo>,
 ) {
     commands.spawn(SceneRoot(
         asset_server.load(GltfAssetLabel::Scene(0).from_asset("models/fox.glb")),
     ));
 
     let vat_texture = asset_server.load("models/fox_vat.exr");
+
+    let os = &remap_info.0.os_remap;
+    // Start on the first clip ordered by start_frame.
+    let first = remap_info
+        .0
+        .clips_ordered()
+        .into_iter()
+        .next()
+        .expect("remap_info has no animations");
 
     let material = vat_materials.add(ExtendedMaterial {
         base: StandardMaterial {
@@ -89,15 +80,14 @@ fn setup(
         extension: VatMaterialExtension {
             vat_texture,
             settings: VatSettings {
-                bounds_min: Vec3::new(-8.0, -46.2, -18.5),
-                bounds_max: Vec3::new(55.1, 52.0, 54.7),
-                // remap_info "Frames": 128, texture height = 256 (pos + normals)
-                frame_count: 128,
-                y_resolution: 256.0,
-                fps: 30.0,
+                bounds_min: Vec3::from(os.min),
+                bounds_max: Vec3::from(os.max),
+                frame_count: os.frames,
+                y_resolution: os.frames as f32 * Y_RESOLUTION_MULTIPLIER,
+                fps: first.1.framerate,
                 time_offset: 0.0,
-                clip_start_frame: 0.0,
-                clip_frame_count: 82.0,
+                clip_start_frame: first.1.start_frame as f32,
+                clip_frame_count: first.1.frame_count() as f32,
             },
         },
     });
@@ -122,7 +112,7 @@ fn setup(
 ///   Arrow Left/Right — orbit horizontally
 ///   Arrow Up/Down   — orbit vertically
 ///   Z / X           — zoom in / out
-///   1 / 2 / 3       — switch animation clip (Survey / Walk / Run)
+///   1 / 2 / 3 / … — switch to animation clip N (ordered by start_frame)
 fn orbit_camera(
     keys: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
@@ -178,24 +168,35 @@ fn switch_clip(
     keys: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
     fox_material: Res<FoxMaterial>,
+    remap_info: Res<FoxRemapInfo>,
     mut vat_materials: ResMut<Assets<VatMaterial>>,
 ) {
-    let clip = if keys.just_pressed(KeyCode::Digit1) {
-        Some(FoxClip::Survey)
-    } else if keys.just_pressed(KeyCode::Digit2) {
-        Some(FoxClip::Walk)
-    } else if keys.just_pressed(KeyCode::Digit3) {
-        Some(FoxClip::Run)
-    } else {
-        None
-    };
+    const DIGIT_KEYS: &[KeyCode] = &[
+        KeyCode::Digit1,
+        KeyCode::Digit2,
+        KeyCode::Digit3,
+        KeyCode::Digit4,
+        KeyCode::Digit5,
+        KeyCode::Digit6,
+        KeyCode::Digit7,
+        KeyCode::Digit8,
+        KeyCode::Digit9,
+    ];
 
-    if let Some(clip) = clip {
+    let clips = remap_info.0.clips_ordered();
+    let selected = DIGIT_KEYS
+        .iter()
+        .enumerate()
+        .find(|(_, key)| keys.just_pressed(**key))
+        .and_then(|(i, _)| clips.get(i).copied());
+
+    if let Some((name, clip)) = selected {
         if let Some(mat) = vat_materials.get_mut(&fox_material.0) {
-            mat.extension.settings.clip_start_frame = clip.start_frame();
-            mat.extension.settings.clip_frame_count = clip.frame_count();
+            mat.extension.settings.clip_start_frame = clip.start_frame as f32;
+            mat.extension.settings.clip_frame_count = clip.frame_count() as f32;
+            mat.extension.settings.fps = clip.framerate;
             mat.extension.settings.time_offset = time.elapsed_secs();
-            info!("Switched to clip: {}", clip.name());
+            info!("Switched to clip: {name}");
         }
     }
 }
