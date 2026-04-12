@@ -2,7 +2,7 @@ use bevy::{
     mesh::MeshTag, pbr::ExtendedMaterial, prelude::*, render::storage::ShaderStorageBuffer,
 };
 use bevy_flipbook::{
-    VatHandler, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings, VatSlotComponent,
+    VatHandler, VatMarker, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings,
     remap_info::RemapInfo,
 };
 
@@ -180,7 +180,7 @@ fn replace_materials(
             .insert((
                 MeshMaterial3d(fox_material.0.clone()),
                 MeshTag(slot_id),
-                VatSlotComponent { mat: fox_material.0.clone(), slot_id },
+                VatMarker { slot_id },
             ));
     }
 }

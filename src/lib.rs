@@ -27,13 +27,21 @@ impl Plugin for VatPlugin {
             );
 
         app.world_mut()
-            .register_component_hooks::<VatSlotComponent>()
+            .register_component_hooks::<VatMarker>()
             .on_remove(|mut world: DeferredWorld, ctx: HookContext| {
-                let Some(slot) = world.get::<VatSlotComponent>(ctx.entity).cloned() else {
-                    return;
-                };
-                if let Some(mut handler) = world.get_resource_mut::<VatHandler>() {
-                    handler.slot_buffers.free_slot(slot.mat, slot.slot_id);
+                let slot_id = world
+                    .get::<VatMarker>(ctx.entity)
+                    .map(|m| m.slot_id);
+                let mat = world
+                    .get::<MeshMaterial3d<VatMaterial>>(ctx.entity)
+                    .map(|m| m.0.clone());
+
+                if let (Some(slot_id), Some(mat), Some(mut handler)) = (
+                    slot_id,
+                    mat,
+                    world.get_resource_mut::<VatHandler>(),
+                ) {
+                    handler.slot_buffers.free_slot(mat, slot_id);
                 }
             });
     }
@@ -41,9 +49,9 @@ impl Plugin for VatPlugin {
 
 /// Attach this alongside [`bevy::mesh::MeshTag`] to automatically reclaim the
 /// slot when the entity is despawned or the component is removed.
+/// The material handle is read from [`MeshMaterial3d<VatMaterial>`] on the same entity.
 #[derive(Component, Clone)]
-pub struct VatSlotComponent {
-    pub mat: Handle<VatMaterial>,
+pub struct VatMarker {
     pub slot_id: u32,
 }
 
@@ -55,10 +63,6 @@ pub struct VatHandler {
 impl VatHandler {
     pub fn allocate_slot(&mut self, mat_handle: Handle<VatMaterial>) -> u32 {
         self.slot_buffers.allocate_slot(mat_handle)
-    }
-
-    pub fn free_slot(&mut self, mat_handle: Handle<VatMaterial>, slot_id: u32) {
-        self.slot_buffers.free_slot(mat_handle, slot_id);
     }
 
     pub fn update_slot(

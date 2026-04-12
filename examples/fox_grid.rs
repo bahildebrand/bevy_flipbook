@@ -1,16 +1,15 @@
 use bevy::{
-    mesh::MeshTag,
-    pbr::ExtendedMaterial,
-    prelude::*,
-    render::storage::ShaderStorageBuffer,
+    mesh::MeshTag, pbr::ExtendedMaterial, prelude::*, render::storage::ShaderStorageBuffer,
 };
 use bevy_flipbook::{
-    remap_info::RemapInfo, VatHandler, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings,
-    VatSlotComponent,
+    VatHandler, VatMarker, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings,
+    remap_info::RemapInfo,
 };
 
-const REMAP_INFO_JSON: &str =
-    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/models/fox-remap_info.json"));
+const REMAP_INFO_JSON: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/assets/models/fox-remap_info.json"
+));
 
 const Y_RESOLUTION_MULTIPLIER: f32 = 2.0;
 
@@ -30,7 +29,8 @@ struct FoxInstance {
 }
 
 fn main() {
-    let remap_info = RemapInfo::from_json(REMAP_INFO_JSON).expect("failed to parse remap_info.json");
+    let remap_info =
+        RemapInfo::from_json(REMAP_INFO_JSON).expect("failed to parse remap_info.json");
 
     App::new()
         .add_plugins((
@@ -56,7 +56,10 @@ fn setup(
     let vat_texture = asset_server.load("models/fox_vat.exr");
     let os = &remap_info.0.os_remap;
     let clips = remap_info.0.clips_ordered();
-    let first = clips.first().copied().expect("remap_info has no animations");
+    let first = clips
+        .first()
+        .copied()
+        .expect("remap_info has no animations");
 
     let slots = buffers.add(ShaderStorageBuffer::new(&[0u8; 4], default()));
 
@@ -88,9 +91,7 @@ fn setup(
             let x = col as f32 * FOX_SPACING - half_extent;
             let z = row as f32 * FOX_SPACING - half_extent;
             commands.spawn((
-                SceneRoot(
-                    asset_server.load(GltfAssetLabel::Scene(0).from_asset("models/fox.glb")),
-                ),
+                SceneRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset("models/fox.glb"))),
                 Transform::from_translation(Vec3::new(x, 0.0, z)),
                 FoxInstance { clip_index },
             ));
@@ -140,7 +141,7 @@ fn replace_materials(
             .insert((
                 MeshMaterial3d(fox_material.0.clone()),
                 MeshTag(slot_id),
-                VatSlotComponent { mat: fox_material.0.clone(), slot_id },
+                VatMarker { slot_id },
             ));
     }
 }
