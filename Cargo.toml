@@ -22,5 +22,9 @@ name = "fox"
 path = "examples/fox.rs"
 
 [[example]]
+name = "fox_reclaim"
+path = "examples/fox_reclaim.rs"
+
+[[example]]
 name = "fox_grid"
 path = "examples/fox_grid.rs"
