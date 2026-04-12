@@ -17,9 +17,18 @@ struct VatSettings {
     clip_frame_count: f32,
 }
 
+struct VatSlot {
+    time_offset: f32,
+    clip_start_frame: f32,
+    clip_frame_count: f32,
+    _padding: u32,
+}
+
 @group(#{MATERIAL_BIND_GROUP}) @binding(100) var vat_texture: texture_2d<f32>;
 @group(#{MATERIAL_BIND_GROUP}) @binding(101) var vat_sampler: sampler;
 @group(#{MATERIAL_BIND_GROUP}) @binding(102) var<uniform> vat: VatSettings;
+@group(#{MATERIAL_BIND_GROUP}) @binding(103) var<storage, read> slots: array<VatSlot>;
+
 
 struct Vertex {
     @builtin(instance_index) instance_index: u32,

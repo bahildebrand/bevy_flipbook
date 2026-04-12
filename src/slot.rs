@@ -68,6 +68,7 @@ pub(crate) struct VatSlot {
     pub time_offset: f32,
     pub clip_start_frame: f32,
     pub clip_frame_count: f32,
+    _padding: u32,
 }
 
 impl VatSlot {
@@ -76,6 +77,7 @@ impl VatSlot {
             time_offset,
             clip_start_frame,
             clip_frame_count,
+            _padding: 0,
         }
     }
 }
