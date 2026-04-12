@@ -20,13 +20,13 @@
             "looping": true
         },
         "Walk": {
-            "startFrame": 82,
+            "startFrame": 83,
             "endFrame": 99,
             "framerate": 30,
             "looping": true
         },
         "Run": {
-            "startFrame": 99,
+            "startFrame": 100,
             "endFrame": 127,
             "framerate": 30,
             "looping": true
