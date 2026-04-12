@@ -1,23 +1,39 @@
 use bevy::{pbr::ExtendedMaterial, prelude::*};
-use bevy_openvat::{VatMaterial, VatMaterialExtension, VatPlugin, VatSettings};
+use bevy_flipbook::{VatMaterial, VatMaterialExtension, VatPlugin, VatSettings};
 
 #[derive(Resource)]
 struct FoxMaterial(Handle<VatMaterial>);
 
 // Fox animation clips from fox-remap_info.json
 #[derive(Clone, Copy)]
-enum FoxClip { Survey, Walk, Run }
+enum FoxClip {
+    Survey,
+    Walk,
+    Run,
+}
 
 impl FoxClip {
     fn start_frame(self) -> f32 {
         // Skip NLA overlap frames (82 and 99 are blended transition frames)
-        match self { Self::Survey => 0.0, Self::Walk => 83.0, Self::Run => 100.0 }
+        match self {
+            Self::Survey => 0.0,
+            Self::Walk => 83.0,
+            Self::Run => 100.0,
+        }
     }
     fn frame_count(self) -> f32 {
-        match self { Self::Survey => 82.0, Self::Walk => 16.0, Self::Run => 28.0 }
+        match self {
+            Self::Survey => 82.0,
+            Self::Walk => 16.0,
+            Self::Run => 28.0,
+        }
     }
     fn name(self) -> &'static str {
-        match self { Self::Survey => "Survey (1)", Self::Walk => "Walk (2)", Self::Run => "Run (3)" }
+        match self {
+            Self::Survey => "Survey (1)",
+            Self::Walk => "Walk (2)",
+            Self::Run => "Run (3)",
+        }
     }
 }
 
@@ -31,7 +47,12 @@ struct OrbitCamera {
 
 impl Default for OrbitCamera {
     fn default() -> Self {
-        Self { yaw: 0.3, pitch: 0.4, radius: 120.0, focus: Vec3::new(0.0, 10.0, 0.0) }
+        Self {
+            yaw: 0.3,
+            pitch: 0.4,
+            radius: 120.0,
+            focus: Vec3::new(0.0, 10.0, 0.0),
+        }
     }
 }
 
@@ -61,7 +82,10 @@ fn setup(
     let vat_texture = asset_server.load("models/fox_vat.exr");
 
     let material = vat_materials.add(ExtendedMaterial {
-        base: StandardMaterial { base_color: Color::srgb(0.8, 0.7, 0.5), ..default() },
+        base: StandardMaterial {
+            base_color: Color::srgb(0.8, 0.7, 0.5),
+            ..default()
+        },
         extension: VatMaterialExtension {
             vat_texture,
             settings: VatSettings {
@@ -81,7 +105,11 @@ fn setup(
     commands.insert_resource(FoxMaterial(material));
 
     commands.spawn((
-        DirectionalLight { illuminance: 10_000.0, shadows_enabled: true, ..default() },
+        DirectionalLight {
+            illuminance: 10_000.0,
+            shadows_enabled: true,
+            ..default()
+        },
         Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -0.8, 0.4, 0.0)),
     ));
 
@@ -100,15 +128,29 @@ fn orbit_camera(
     time: Res<Time>,
     mut query: Query<(&mut OrbitCamera, &mut Transform)>,
 ) {
-    let Ok((mut orbit, mut transform)) = query.single_mut() else { return };
+    let Ok((mut orbit, mut transform)) = query.single_mut() else {
+        return;
+    };
     let dt = time.delta_secs();
 
-    if keys.pressed(KeyCode::ArrowLeft)  { orbit.yaw   += 1.5 * dt; }
-    if keys.pressed(KeyCode::ArrowRight) { orbit.yaw   -= 1.5 * dt; }
-    if keys.pressed(KeyCode::ArrowUp)    { orbit.pitch  = (orbit.pitch + 1.5 * dt).clamp(-1.4, 1.4); }
-    if keys.pressed(KeyCode::ArrowDown)  { orbit.pitch  = (orbit.pitch - 1.5 * dt).clamp(-1.4, 1.4); }
-    if keys.pressed(KeyCode::KeyZ)       { orbit.radius = (orbit.radius - 60.0 * dt).clamp(10.0, 500.0); }
-    if keys.pressed(KeyCode::KeyX)       { orbit.radius = (orbit.radius + 60.0 * dt).clamp(10.0, 500.0); }
+    if keys.pressed(KeyCode::ArrowLeft) {
+        orbit.yaw += 1.5 * dt;
+    }
+    if keys.pressed(KeyCode::ArrowRight) {
+        orbit.yaw -= 1.5 * dt;
+    }
+    if keys.pressed(KeyCode::ArrowUp) {
+        orbit.pitch = (orbit.pitch + 1.5 * dt).clamp(-1.4, 1.4);
+    }
+    if keys.pressed(KeyCode::ArrowDown) {
+        orbit.pitch = (orbit.pitch - 1.5 * dt).clamp(-1.4, 1.4);
+    }
+    if keys.pressed(KeyCode::KeyZ) {
+        orbit.radius = (orbit.radius - 60.0 * dt).clamp(10.0, 500.0);
+    }
+    if keys.pressed(KeyCode::KeyX) {
+        orbit.radius = (orbit.radius + 60.0 * dt).clamp(10.0, 500.0);
+    }
 
     *transform = orbit_to_transform(&orbit);
 }

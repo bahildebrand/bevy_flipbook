@@ -1,5 +1,5 @@
 [package]
-name = "bevy_openvat"
+name = "bevy_flipbook"
 version = "0.1.0"
 edition = "2024"
 description = "OpenVAT vertex animation texture rendering for Bevy"
