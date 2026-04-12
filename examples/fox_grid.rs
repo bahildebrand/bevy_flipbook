@@ -1,8 +1,6 @@
-use bevy::{
-    mesh::MeshTag, pbr::ExtendedMaterial, prelude::*, render::storage::ShaderStorageBuffer,
-};
+use bevy::{pbr::ExtendedMaterial, prelude::*, render::storage::ShaderStorageBuffer};
 use bevy_flipbook::{
-    VatHandler, VatMarker, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings,
+    VatBundle, VatHandler, VatMarker, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings,
     remap_info::RemapInfo,
 };
 
@@ -140,8 +138,7 @@ fn replace_materials(
             .remove::<MeshMaterial3d<StandardMaterial>>()
             .insert((
                 MeshMaterial3d(fox_material.0.clone()),
-                MeshTag(slot_id),
-                VatMarker { slot_id },
+                VatBundle::new(slot_id),
             ));
     }
 }

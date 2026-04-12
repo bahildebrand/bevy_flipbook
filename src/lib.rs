@@ -2,14 +2,13 @@ mod material;
 pub mod remap_info;
 mod slot;
 
+use crate::slot::VatSlotBuffers;
+use crate::{remap_info::AnimationClip, slot::VatSlot};
 use bevy::ecs::{lifecycle::HookContext, world::DeferredWorld};
 use bevy::render::storage::ShaderStorageBuffer;
 pub use material::{VatMaterial, VatMaterialExtension, VatSettings};
 
-use crate::slot::VatSlotBuffers;
-use crate::{remap_info::AnimationClip, slot::VatSlot};
-
-use bevy::{prelude::*, shader::ShaderRef};
+use bevy::{mesh::MeshTag, prelude::*, shader::ShaderRef};
 
 pub fn vat_vertex_shader() -> ShaderRef {
     "shaders/vat.wgsl".into()
@@ -29,25 +28,37 @@ impl Plugin for VatPlugin {
         app.world_mut()
             .register_component_hooks::<VatMarker>()
             .on_remove(|mut world: DeferredWorld, ctx: HookContext| {
-                let slot_id = world
-                    .get::<VatMarker>(ctx.entity)
-                    .map(|m| m.slot_id);
+                let slot_id = world.get::<VatMarker>(ctx.entity).map(|m| m.slot_id);
                 let mat = world
                     .get::<MeshMaterial3d<VatMaterial>>(ctx.entity)
                     .map(|m| m.0.clone());
 
-                if let (Some(slot_id), Some(mat), Some(mut handler)) = (
-                    slot_id,
-                    mat,
-                    world.get_resource_mut::<VatHandler>(),
-                ) {
+                if let (Some(slot_id), Some(mat), Some(mut handler)) =
+                    (slot_id, mat, world.get_resource_mut::<VatHandler>())
+                {
                     handler.slot_buffers.free_slot(mat, slot_id);
                 }
             });
     }
 }
 
-/// Attach this alongside [`bevy::mesh::MeshTag`] to automatically reclaim the
+/// Convenience bundle combining [`bevy::mesh::MeshTag`] and [`VatMarker`].
+/// Insert this on mesh entities after allocating a slot via [`VatHandler::allocate_slot`].
+#[derive(Bundle)]
+pub struct VatBundle {
+    pub mesh_tag: MeshTag,
+    pub marker: VatMarker,
+}
+
+impl VatBundle {
+    pub fn new(slot_id: u32) -> Self {
+        Self {
+            mesh_tag: MeshTag(slot_id),
+            marker: VatMarker { slot_id },
+        }
+    }
+}
+
 /// slot when the entity is despawned or the component is removed.
 /// The material handle is read from [`MeshMaterial3d<VatMaterial>`] on the same entity.
 #[derive(Component, Clone)]

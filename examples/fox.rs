@@ -1,8 +1,6 @@
-use bevy::{
-    mesh::MeshTag, pbr::ExtendedMaterial, prelude::*, render::storage::ShaderStorageBuffer,
-};
+use bevy::{pbr::ExtendedMaterial, prelude::*, render::storage::ShaderStorageBuffer};
 use bevy_flipbook::{
-    VatHandler, VatMarker, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings,
+    VatBundle, VatHandler, VatMarker, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings,
     remap_info::RemapInfo,
 };
 
@@ -179,8 +177,7 @@ fn replace_materials(
             .remove::<MeshMaterial3d<StandardMaterial>>()
             .insert((
                 MeshMaterial3d(fox_material.0.clone()),
-                MeshTag(slot_id),
-                VatMarker { slot_id },
+                VatBundle::new(slot_id),
             ));
     }
 }
@@ -190,7 +187,7 @@ fn switch_clip(
     time: Res<Time>,
     fox_material: Res<FoxMaterial>,
     remap_info: Res<FoxRemapInfo>,
-    mesh_tags: Query<&MeshTag>,
+    markers: Query<&VatMarker>,
     mut vat_handler: ResMut<VatHandler>,
 ) {
     const DIGIT_KEYS: &[KeyCode] = &[
@@ -213,10 +210,10 @@ fn switch_clip(
         .and_then(|(i, _)| clips.get(i).copied());
 
     if let Some((name, clip)) = selected {
-        for tag in &mesh_tags {
+        for marker in &markers {
             vat_handler.update_slot(
                 fox_material.0.clone(),
-                tag.0,
+                marker.slot_id,
                 time.elapsed_secs(),
                 clip.clone(),
             );
