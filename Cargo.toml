@@ -20,3 +20,7 @@ bevy = { version = "0.18", features = ["exr"] }
 [[example]]
 name = "fox"
 path = "examples/fox.rs"
+
+[[example]]
+name = "fox_grid"
+path = "examples/fox_grid.rs"
