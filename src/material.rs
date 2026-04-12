@@ -55,10 +55,6 @@ pub struct VatSettings {
     /// Actual texture pixel height (frame_count * 2 for pos+normals in one texture).
     pub y_resolution: f32,
     pub fps: f32,
-    /// Global time when the current clip started — shader computes elapsed as globals.time - time_offset.
-    pub time_offset: f32,
-    pub clip_start_frame: f32,
-    pub clip_frame_count: f32,
 }
 
 impl From<RemapInfo> for VatSettings {
@@ -76,9 +72,6 @@ impl From<RemapInfo> for VatSettings {
                 .expect("remap_info has no animations")
                 .1
                 .framerate,
-            time_offset: 0.0,
-            clip_start_frame: 0.0,
-            clip_frame_count: os.frames as f32, // default to entire range if no clips
         }
     }
 }

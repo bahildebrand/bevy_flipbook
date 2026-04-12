@@ -11,10 +11,6 @@ struct VatSettings {
     bounds_max: vec3<f32>,
     y_resolution: f32,      // actual texture pixel height (frame_count * 2 for pos+normals)
     fps: f32,
-    /// Global time when the current clip started — shader computes elapsed as globals.time - time_offset.
-    time_offset: f32,
-    clip_start_frame: f32,
-    clip_frame_count: f32,
 }
 
 struct VatSlot {

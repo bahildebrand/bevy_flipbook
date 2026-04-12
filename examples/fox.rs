@@ -1,15 +1,14 @@
 use bevy::{
-    mesh::MeshTag,
-    pbr::ExtendedMaterial,
-    prelude::*,
-    render::storage::ShaderStorageBuffer,
+    mesh::MeshTag, pbr::ExtendedMaterial, prelude::*, render::storage::ShaderStorageBuffer,
 };
 use bevy_flipbook::{
-    remap_info::RemapInfo, VatHandler, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings,
+    VatHandler, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings, remap_info::RemapInfo,
 };
 
-const REMAP_INFO_JSON: &str =
-    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/models/fox-remap_info.json"));
+const REMAP_INFO_JSON: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/assets/models/fox-remap_info.json"
+));
 
 // Texture height is frame_count * 2 because positions and normals are packed into one texture.
 const Y_RESOLUTION_MULTIPLIER: f32 = 2.0;
@@ -40,7 +39,8 @@ impl Default for OrbitCamera {
 }
 
 fn main() {
-    let remap_info = RemapInfo::from_json(REMAP_INFO_JSON).expect("failed to parse remap_info.json");
+    let remap_info =
+        RemapInfo::from_json(REMAP_INFO_JSON).expect("failed to parse remap_info.json");
 
     App::new()
         .add_plugins((
@@ -92,9 +92,6 @@ fn setup(
                 frame_count: os.frames,
                 y_resolution: os.frames as f32 * Y_RESOLUTION_MULTIPLIER,
                 fps: first.1.framerate,
-                time_offset: 0.0,
-                clip_start_frame: first.1.start_frame as f32,
-                clip_frame_count: first.1.frame_count() as f32,
             },
             slots,
         ),
