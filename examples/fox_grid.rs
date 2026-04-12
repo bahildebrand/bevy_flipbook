@@ -6,6 +6,7 @@ use bevy::{
 };
 use bevy_flipbook::{
     remap_info::RemapInfo, VatHandler, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings,
+    VatSlotComponent,
 };
 
 const REMAP_INFO_JSON: &str =
@@ -136,7 +137,11 @@ fn replace_materials(
         commands
             .entity(entity)
             .remove::<MeshMaterial3d<StandardMaterial>>()
-            .insert((MeshMaterial3d(fox_material.0.clone()), MeshTag(slot_id)));
+            .insert((
+                MeshMaterial3d(fox_material.0.clone()),
+                MeshTag(slot_id),
+                VatSlotComponent { mat: fox_material.0.clone(), slot_id },
+            ));
     }
 }
 

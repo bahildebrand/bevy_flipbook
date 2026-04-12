@@ -17,8 +17,9 @@ impl VatSlotBuffers {
 
         let slot_id = buffer.allocator.allocate();
 
-        let slot = VatSlot::default();
-        buffer.buffer.push(slot);
+        if slot_id as usize >= buffer.buffer.len() {
+            buffer.buffer.push(VatSlot::default());
+        }
 
         buffer.dirty = true;
 
@@ -41,6 +42,12 @@ impl VatSlotBuffers {
         slot.clip_frame_count = animation_clip.frame_count() as f32;
 
         buffer.dirty = true;
+    }
+
+    pub fn free_slot(&mut self, mat_handle: Handle<VatMaterial>, slot_id: u32) {
+        if let Some(buffer) = self.buffers.get_mut(&mat_handle) {
+            buffer.allocator.free(slot_id);
+        }
     }
 
     pub fn dirty_buffer_iter(
