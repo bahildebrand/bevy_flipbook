@@ -1,3 +1,5 @@
+mod slot;
+
 use bevy::{
     pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,
