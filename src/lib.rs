@@ -13,8 +13,21 @@ pub use material::{VatMaterial, VatMaterialExtension, VatSettings, VatSlotAccess
 
 use bevy::{mesh::MeshTag, prelude::*, shader::ShaderRef};
 
+/// Returns a [`ShaderRef`] pointing to the embedded VAT vertex shader.
+///
+/// The shader is compiled into the library binary and loaded via Bevy's
+/// embedded asset system, so downstream crates do not need to copy any
+/// WGSL files into their own `assets/` directory.
+///
+/// Use this in a custom [`MaterialExtension::vertex_shader`] implementation:
+///
+/// ```rust,no_run
+/// fn vertex_shader() -> ShaderRef {
+///     bevy_flipbook::vat_vertex_shader()
+/// }
+/// ```
 pub fn vat_vertex_shader() -> ShaderRef {
-    "shaders/vat.wgsl".into()
+    "embedded://bevy_flipbook/shaders/vat.wgsl".into()
 }
 
 /// Plugin that registers VAT rendering for a given [`MaterialExtension`] `E`.
@@ -51,6 +64,7 @@ where
         PartialEq + Eq + std::hash::Hash + Clone,
 {
     fn build(&self, app: &mut App) {
+        bevy::asset::embedded_asset!(app, "shaders/vat.wgsl");
         app.add_plugins(MaterialPlugin::<ExtendedMaterial<StandardMaterial, E>>::default())
             .init_resource::<VatHandler<E>>()
             .add_systems(

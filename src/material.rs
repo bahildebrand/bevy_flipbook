@@ -42,7 +42,7 @@ impl VatMaterialExtension {
 
 impl MaterialExtension for VatMaterialExtension {
     fn vertex_shader() -> ShaderRef {
-        "shaders/vat.wgsl".into()
+        crate::vat_vertex_shader()
     }
 }
 

@@ -142,7 +142,7 @@ The `VatBundle` convenience bundle inserts both `MeshTag(slot_id)` and `VatMarke
 
 ### 1. Define your extension
 
-Your struct must redeclare the VAT bind group bindings at the **same indices** the vertex shader expects (`100`–`103`), then add your own after that.
+Your struct must redeclare the VAT bind group bindings at the **same indices** the vertex shader expects (`100`-`103`), then add your own after that. The VAT vertex shader is embedded in the `bevy_flipbook` binary - call `vat_vertex_shader()` to get a reference to it without copying any files into your project.
 
 ```rust
 use bevy::prelude::*;
