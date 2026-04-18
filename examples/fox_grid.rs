@@ -1,6 +1,6 @@
 use bevy::{pbr::ExtendedMaterial, prelude::*, render::storage::ShaderStorageBuffer};
 use bevy_flipbook::{
-    VatBundle, VatHandler, VatMarker, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings,
+    VatBundle, VatHandler, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings,
     remap_info::RemapInfo,
 };
 
@@ -36,7 +36,7 @@ fn main() {
                 file_path: format!("{}/assets", env!("CARGO_MANIFEST_DIR")),
                 ..default()
             }),
-            VatPlugin,
+            VatPlugin::<VatMaterialExtension>::default(),
         ))
         .insert_resource(FoxRemapInfo(remap_info))
         .add_systems(Startup, setup)
@@ -138,7 +138,7 @@ fn replace_materials(
             .remove::<MeshMaterial3d<StandardMaterial>>()
             .insert((
                 MeshMaterial3d(fox_material.0.clone()),
-                VatBundle::new(slot_id),
+                VatBundle::<VatMaterialExtension>::new(slot_id),
             ));
     }
 }

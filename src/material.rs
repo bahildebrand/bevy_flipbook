@@ -46,6 +46,22 @@ impl MaterialExtension for VatMaterialExtension {
     }
 }
 
+/// Trait allowing the plugin's slot-buffer system to write the updated
+/// [`ShaderStorageBuffer`] handle into any [`MaterialExtension`] that contains
+/// VAT slot data.
+///
+/// Implement this on your own extension type if you wrap or compose
+/// [`VatMaterialExtension`] with a custom fragment shader.
+pub trait VatSlotAccess {
+    fn set_slots(&mut self, slots: Handle<ShaderStorageBuffer>);
+}
+
+impl VatSlotAccess for VatMaterialExtension {
+    fn set_slots(&mut self, slots: Handle<ShaderStorageBuffer>) {
+        self.slots = slots;
+    }
+}
+
 #[derive(ShaderType, Debug, Clone)]
 pub struct VatSettings {
     pub bounds_min: Vec3,

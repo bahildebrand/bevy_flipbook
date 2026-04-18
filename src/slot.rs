@@ -2,17 +2,24 @@ mod allocator;
 
 use std::collections::HashMap;
 
-use crate::{VatMaterial, remap_info::AnimationClip, slot::allocator::SlotAllocator};
+use crate::{remap_info::AnimationClip, slot::allocator::SlotAllocator};
 
-use bevy::{prelude::*, render::render_resource::ShaderType};
+use bevy::{pbr::{ExtendedMaterial, MaterialExtension}, prelude::*, render::render_resource::ShaderType};
 
-#[derive(Default)]
-pub(crate) struct VatSlotBuffers {
-    buffers: HashMap<Handle<VatMaterial>, VatSlotBuffer>,
+pub(crate) struct VatSlotBuffers<E: MaterialExtension> {
+    buffers: HashMap<Handle<ExtendedMaterial<StandardMaterial, E>>, VatSlotBuffer>,
 }
 
-impl VatSlotBuffers {
-    pub fn allocate_slot(&mut self, mat_handle: Handle<VatMaterial>) -> u32 {
+impl<E: MaterialExtension> Default for VatSlotBuffers<E> {
+    fn default() -> Self {
+        Self {
+            buffers: HashMap::new(),
+        }
+    }
+}
+
+impl<E: MaterialExtension> VatSlotBuffers<E> {
+    pub fn allocate_slot(&mut self, mat_handle: Handle<ExtendedMaterial<StandardMaterial, E>>) -> u32 {
         let buffer = self.buffers.entry(mat_handle).or_default();
 
         let slot_id = buffer.allocator.allocate();
@@ -29,7 +36,7 @@ impl VatSlotBuffers {
     // TODO: actually handle errors here
     pub fn update_slot(
         &mut self,
-        mat_handle: Handle<VatMaterial>,
+        mat_handle: Handle<ExtendedMaterial<StandardMaterial, E>>,
         slot_id: u32,
         time_offset: f32,
         animation_clip: AnimationClip,
@@ -44,7 +51,7 @@ impl VatSlotBuffers {
         buffer.dirty = true;
     }
 
-    pub fn free_slot(&mut self, mat_handle: Handle<VatMaterial>, slot_id: u32) {
+    pub fn free_slot(&mut self, mat_handle: Handle<ExtendedMaterial<StandardMaterial, E>>, slot_id: u32) {
         if let Some(buffer) = self.buffers.get_mut(&mat_handle) {
             buffer.allocator.free(slot_id);
         }
@@ -52,7 +59,7 @@ impl VatSlotBuffers {
 
     pub fn dirty_buffer_iter(
         &mut self,
-    ) -> impl Iterator<Item = (&Handle<VatMaterial>, &Vec<VatSlot>)> {
+    ) -> impl Iterator<Item = (&Handle<ExtendedMaterial<StandardMaterial, E>>, &Vec<VatSlot>)> {
         self.buffers
             .iter_mut()
             .filter(|(_, buffer)| buffer.dirty)

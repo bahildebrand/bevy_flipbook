@@ -30,7 +30,7 @@ use bevy_flipbook::{
 
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, VatPlugin))
+        .add_plugins((DefaultPlugins, VatPlugin::<VatMaterialExtension>::default()))
         .add_systems(Startup, setup)
         .add_systems(Update, assign_materials)
         .run();
@@ -81,7 +81,7 @@ struct MyMaterial(Handle<VatMaterial>);
 
 fn assign_materials(
     mut commands: Commands,
-    query: Query<Entity, -dded<MeshMaterial3d<StandardMaterial>>>,
+    query: Query<Entity, Added<MeshMaterial3d<StandardMaterial>>>,
     mat: Res<MyMaterial>,
     remap: Res<MyRemapInfo>,
     mut handler: ResMut<VatHandler>,
@@ -96,7 +96,7 @@ fn assign_materials(
             .remove::<MeshMaterial3d<StandardMaterial>>()
             .insert((
                 MeshMaterial3d(mat.0.clone()),
-                VatBundle::new(slot_id),
+                VatBundle::<VatMaterialExtension>::new(slot_id),
             ));
     }
 }
@@ -134,7 +134,129 @@ let slot_id = handler.allocate_slot(material_handle.clone());
 handler.update_slot(material_handle.clone(), slot_id, time.elapsed_secs(), clip);
 ```
 
-The `VatBundle` convenience bundle inserts both `MeshTag(slot_id)` and `VatMarker { slot_id }`. The `VatMarker` component has an `on_remove` hook that automatically returns the slot to the free list when the entity is despawned.
+The `VatBundle` convenience bundle inserts both `MeshTag(slot_id)` and `VatMarker`. The `VatMarker` component has an `on_remove` hook that automatically returns the slot to the free list when the entity is despawned.
+
+## Custom Extension
+
+`VatPlugin`, `VatHandler`, `VatBundle`, and related types are generic over a `MaterialExtension` type parameter (defaulting to `VatMaterialExtension`). You can supply your own extension to add custom fragment shader logic (tinting, dissolve effects, etc.) while keeping the full VAT vertex animation pipeline.
+
+### 1. Define your extension
+
+Your struct must redeclare the VAT bind group bindings at the **same indices** the vertex shader expects (`100`–`103`), then add your own after that.
+
+```rust
+use bevy::prelude::*;
+use bevy::pbr::{MaterialExtension, ExtendedMaterial};
+use bevy::render::storage::ShaderStorageBuffer;
+use bevy_flipbook::{VatSettings, VatSlotAccess, vat_vertex_shader};
+
+#[derive(Asset, AsBindGroup, TypePath, Debug, Clone)]
+pub struct MyExtension {
+    // --- VAT bindings (must match vat.wgsl binding indices) ---
+    #[texture(100)]
+    #[sampler(101)]
+    pub vat_texture: Handle<Image>,
+
+    #[uniform(102)]
+    pub settings: VatSettings,
+
+    #[storage(103, read_only)]
+    pub slots: Handle<ShaderStorageBuffer>,
+
+    // --- Your custom bindings start here ---
+    #[uniform(104)]
+    pub tint: LinearRgba,
+}
+
+impl MaterialExtension for MyExtension {
+    fn vertex_shader() -> ShaderRef {
+        // Reuse the built-in VAT vertex shader exported by this crate.
+        vat_vertex_shader()
+    }
+
+    fn fragment_shader() -> ShaderRef {
+        "shaders/my_extension.wgsl".into()
+    }
+}
+
+impl VatSlotAccess for MyExtension {
+    fn set_slots(&mut self, slots: Handle<ShaderStorageBuffer>) {
+        self.slots = slots;
+    }
+}
+```
+
+### 2. Write your fragment shader
+
+Create `assets/shaders/my_extension.wgsl`. Import Bevy's PBR input helpers to participate in the standard lighting pipeline:
+
+```wgsl
+#import bevy_pbr::{
+    pbr_fragment::pbr_input_from_standard_material,
+    pbr_functions::alpha_discard,
+    forward_io::{VertexOutput, FragmentOutput},
+    pbr_functions,
+}
+
+struct MyExtension {
+    tint: vec4<f32>,
+}
+
+@group(#{MATERIAL_BIND_GROUP}) @binding(104) var<uniform> my: MyExtension;
+
+@fragment
+fn fragment(
+    in: VertexOutput,
+    @builtin(front_facing) is_front: bool,
+) -> FragmentOutput {
+    var pbr_input = pbr_input_from_standard_material(in, is_front);
+
+    // Apply your custom tint on top of the base PBR colour
+    pbr_input.material.base_color *= my.tint;
+
+    var out: FragmentOutput;
+    out.color = pbr_functions::apply_pbr_lighting(pbr_input);
+    return out;
+}
+```
+
+### 3. Register the plugin and create the material
+
+```rust
+use bevy_flipbook::{VatPlugin, VatBundle, VatHandler};
+use bevy::pbr::ExtendedMaterial;
+
+type MyMaterial = ExtendedMaterial<StandardMaterial, MyExtension>;
+
+fn main() {
+    App::new()
+        .add_plugins((DefaultPlugins, VatPlugin::<MyExtension>::default()))
+        .add_systems(Startup, setup)
+        .run();
+}
+
+fn setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut materials: ResMut<Assets<MyMaterial>>,
+    mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
+) {
+    let slots = buffers.add(ShaderStorageBuffer::new(&[0u8; 4], default()));
+
+    let material = materials.add(ExtendedMaterial {
+        base: StandardMaterial::default(),
+        extension: MyExtension {
+            vat_texture: asset_server.load("models/fox_vat.exr"),
+            settings: VatSettings { /* ... */ },
+            slots: slots.clone(),
+            tint: LinearRgba::WHITE,
+        },
+    });
+
+    // Spawn entities with VatBundle::<MyExtension>::new(slot_id) instead of
+    // VatBundle::<VatMaterialExtension>::new(slot_id).
+}
+```
 
 ## Examples
 
@@ -153,7 +275,7 @@ cargo run --example <name>
 ## Asset Preparation
 
 1. Install the [OpenVAT](https://github.com/sharpen3d/openvat) Blender add-on
-2. Bake your animated mesh — this produces a `.glb`, a `_vat.exr`, and a `-remap_info.json`
+2. Bake your animated mesh - this produces a `.glb`, a `_vat.exr`, and a `-remap_info.json`
 3. Place all three files in your Bevy `assets/` directory
 
 ## Compatibility
