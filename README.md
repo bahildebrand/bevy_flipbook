@@ -269,8 +269,9 @@ cargo run --example <name>
 | Example | Description |
 |---------|-------------|
 | `fox` | Single fox with keyboard-driven clip switching (1/2/3) |
-| `fox_grid` | 3×3 grid of foxes on one material, each cycling a different clip |
+| `fox_grid` | 3x3 grid of foxes on one material, each cycling a different clip |
 | `fox_reclaim` | Despawn/respawn with Space to verify slot reclamation |
+| `fox_custom_material` | Fox with a custom `MaterialExtension` using the embedded VAT vertex shader |
 
 ## Asset Preparation
 

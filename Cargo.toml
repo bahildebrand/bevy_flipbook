@@ -28,3 +28,7 @@ path = "examples/fox_reclaim.rs"
 [[example]]
 name = "fox_grid"
 path = "examples/fox_grid.rs"
+
+[[example]]
+name = "fox_custom_material"
+path = "examples/fox_custom_material.rs"
