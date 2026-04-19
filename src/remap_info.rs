@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use bevy::{asset::Asset, reflect::Reflect};
+use bevy::{
+    asset::{Asset, AssetLoader, LoadContext, io::Reader},
+    reflect::Reflect,
+};
 use serde::Deserialize;
 
 /// Top-level structure of a `*-remap_info.json` file produced by OpenVAT.
@@ -60,6 +63,66 @@ impl AnimationClip {
     /// Number of frames in the clip (`end_frame - start_frame`).
     pub fn frame_count(&self) -> u32 {
         self.end_frame - self.start_frame
+    }
+}
+
+/// Error type for [`RemapInfoLoader`].
+#[derive(Debug)]
+pub enum RemapInfoLoaderError {
+    Io(std::io::Error),
+    Json(serde_json::Error),
+}
+
+impl std::fmt::Display for RemapInfoLoaderError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Io(e) => write!(f, "IO error: {e}"),
+            Self::Json(e) => write!(f, "JSON parse error: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for RemapInfoLoaderError {}
+
+impl From<std::io::Error> for RemapInfoLoaderError {
+    fn from(e: std::io::Error) -> Self {
+        Self::Io(e)
+    }
+}
+
+impl From<serde_json::Error> for RemapInfoLoaderError {
+    fn from(e: serde_json::Error) -> Self {
+        Self::Json(e)
+    }
+}
+
+/// Asset loader for [`RemapInfo`] JSON files.
+///
+/// Files must use the compound extension `.remap_info.json`
+/// (e.g. `fox.remap_info.json`) so they are unambiguously routed to this
+/// loader rather than any other JSON loader.
+#[derive(Default, bevy::reflect::TypePath)]
+pub struct RemapInfoLoader;
+
+impl AssetLoader for RemapInfoLoader {
+    type Asset = RemapInfo;
+    type Settings = ();
+    type Error = RemapInfoLoaderError;
+
+    async fn load(
+        &self,
+        reader: &mut dyn Reader,
+        _settings: &Self::Settings,
+        _load_context: &mut LoadContext<'_>,
+    ) -> Result<Self::Asset, Self::Error> {
+        let mut bytes = Vec::new();
+        reader.read_to_end(&mut bytes).await?;
+        let remap_info = serde_json::from_slice(&bytes)?;
+        Ok(remap_info)
+    }
+
+    fn extensions(&self) -> &[&str] {
+        &["remap_info.json"]
     }
 }
 

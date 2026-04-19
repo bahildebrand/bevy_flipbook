@@ -5,7 +5,10 @@ mod slot;
 use std::marker::PhantomData;
 
 use crate::slot::VatSlotBuffers;
-use crate::{remap_info::AnimationClip, slot::VatSlot};
+use crate::{
+    remap_info::{AnimationClip, RemapInfoLoader},
+    slot::VatSlot,
+};
 use bevy::ecs::{lifecycle::HookContext, world::DeferredWorld};
 use bevy::pbr::{ExtendedMaterial, MaterialExtension};
 use bevy::render::{render_resource::AsBindGroup, storage::ShaderStorageBuffer};
@@ -73,7 +76,9 @@ where
 {
     fn build(&self, app: &mut App) {
         bevy::asset::embedded_asset!(app, "shaders/vat.wgsl");
-        app.add_plugins(MaterialPlugin::<ExtendedMaterial<StandardMaterial, E>>::default())
+        app.init_asset::<remap_info::RemapInfo>()
+            .register_asset_loader(RemapInfoLoader)
+            .add_plugins(MaterialPlugin::<ExtendedMaterial<StandardMaterial, E>>::default())
             .init_resource::<VatHandler<E>>()
             .add_systems(
                 PostUpdate,
