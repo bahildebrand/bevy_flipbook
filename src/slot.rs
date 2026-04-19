@@ -57,6 +57,10 @@ impl<E: MaterialExtension> VatSlotBuffers<E> {
         }
     }
 
+    pub(crate) fn has_dirty(&self) -> bool {
+        self.buffers.values().any(|b| b.dirty)
+    }
+
     pub fn dirty_buffer_iter(
         &mut self,
     ) -> impl Iterator<Item = (&Handle<ExtendedMaterial<StandardMaterial, E>>, &Vec<VatSlot>)> {
@@ -67,6 +71,66 @@ impl<E: MaterialExtension> VatSlotBuffers<E> {
                 buffer.dirty = false;
                 (handle, &buffer.buffer)
             })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::material::VatMaterialExtension;
+    use bevy::pbr::ExtendedMaterial;
+    use bevy::prelude::{Handle, StandardMaterial};
+
+    type TestMat = ExtendedMaterial<StandardMaterial, VatMaterialExtension>;
+
+    fn make_clip(start: u32, end: u32) -> crate::remap_info::AnimationClip {
+        crate::remap_info::AnimationClip {
+            start_frame: start,
+            end_frame: end,
+            framerate: 30.0,
+            looping: true,
+        }
+    }
+
+    #[test]
+    fn has_dirty_initially_false() {
+        let buffers = VatSlotBuffers::<VatMaterialExtension>::default();
+        assert!(!buffers.has_dirty());
+    }
+
+    #[test]
+    fn has_dirty_true_after_allocate() {
+        let mut buffers = VatSlotBuffers::<VatMaterialExtension>::default();
+        buffers.allocate_slot(Handle::<TestMat>::default());
+        assert!(buffers.has_dirty());
+    }
+
+    #[test]
+    fn has_dirty_clears_when_iter_consumed() {
+        let mut buffers = VatSlotBuffers::<VatMaterialExtension>::default();
+        buffers.allocate_slot(Handle::<TestMat>::default());
+        buffers.dirty_buffer_iter().for_each(|_| ());
+        assert!(!buffers.has_dirty());
+    }
+
+    #[test]
+    fn has_dirty_remains_if_iter_dropped_unconsumed() {
+        let mut buffers = VatSlotBuffers::<VatMaterialExtension>::default();
+        buffers.allocate_slot(Handle::<TestMat>::default());
+        let _ = buffers.dirty_buffer_iter(); // dropped without polling
+        assert!(buffers.has_dirty());
+    }
+
+    #[test]
+    fn has_dirty_true_after_update_slot() {
+        let mut buffers = VatSlotBuffers::<VatMaterialExtension>::default();
+        let handle = Handle::<TestMat>::default();
+        let slot_id = buffers.allocate_slot(handle.clone());
+        buffers.dirty_buffer_iter().for_each(|_| ());
+        assert!(!buffers.has_dirty(), "should be clean after flush");
+
+        buffers.update_slot(handle, slot_id, 0.0, make_clip(0, 10));
+        assert!(buffers.has_dirty(), "should be dirty after update_slot");
     }
 }
 

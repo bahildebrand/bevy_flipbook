@@ -82,7 +82,7 @@ where
             .init_resource::<VatHandler<E>>()
             .add_systems(
                 PostUpdate,
-                update_slot_buffers::<E>.run_if(resource_changed::<VatHandler<E>>),
+                update_slot_buffers::<E>.run_if(vat_has_dirty::<E>),
             );
 
         app.world_mut()
@@ -170,11 +170,19 @@ impl<E: MaterialExtension> VatHandler<E> {
             .update_slot(mat_handle, slot_id, time_offset, animation_clip);
     }
 
+    pub(crate) fn has_dirty(&self) -> bool {
+        self.slot_buffers.has_dirty()
+    }
+
     pub(crate) fn dirty_buffer_iter(
         &mut self,
     ) -> impl Iterator<Item = (&Handle<ExtendedMaterial<StandardMaterial, E>>, &Vec<VatSlot>)> {
         self.slot_buffers.dirty_buffer_iter()
     }
+}
+
+fn vat_has_dirty<E: MaterialExtension>(vat_handler: Res<VatHandler<E>>) -> bool {
+    vat_handler.has_dirty()
 }
 
 fn update_slot_buffers<E: MaterialExtension + VatSlotAccess>(
