@@ -176,7 +176,13 @@ impl<E: MaterialExtension> VatHandler<E> {
 
     pub(crate) fn dirty_buffer_iter(
         &mut self,
-    ) -> impl Iterator<Item = (&Handle<ExtendedMaterial<StandardMaterial, E>>, &Vec<VatSlot>)> {
+    ) -> impl Iterator<
+        Item = (
+            &Handle<ExtendedMaterial<StandardMaterial, E>>,
+            &Vec<VatSlot>,
+            &mut bool,
+        ),
+    > {
         self.slot_buffers.dirty_buffer_iter()
     }
 }
@@ -190,12 +196,15 @@ fn update_slot_buffers<E: MaterialExtension + VatSlotAccess>(
     mut vat_mats: ResMut<Assets<ExtendedMaterial<StandardMaterial, E>>>,
     mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
 ) {
-    for (handle, buffer) in vat_handler.dirty_buffer_iter() {
+    for (handle, buffer, dirty) in vat_handler.dirty_buffer_iter() {
         if let Some(material) = vat_mats.get_mut(handle) {
             let storage_buffer = ShaderStorageBuffer::from(buffer.clone());
             let buffer_handle = buffers.add(storage_buffer);
-
             material.extension.set_slots(buffer_handle);
+            // Clear dirty only after a successful upload. If get_mut returned
+            // None (material not yet loaded), dirty stays true and the system
+            // retries next frame rather than silently dropping the update.
+            *dirty = false;
         }
     }
 }

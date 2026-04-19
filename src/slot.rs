@@ -63,14 +63,17 @@ impl<E: MaterialExtension> VatSlotBuffers<E> {
 
     pub fn dirty_buffer_iter(
         &mut self,
-    ) -> impl Iterator<Item = (&Handle<ExtendedMaterial<StandardMaterial, E>>, &Vec<VatSlot>)> {
+    ) -> impl Iterator<
+        Item = (
+            &Handle<ExtendedMaterial<StandardMaterial, E>>,
+            &Vec<VatSlot>,
+            &mut bool,
+        ),
+    > {
         self.buffers
             .iter_mut()
             .filter(|(_, buffer)| buffer.dirty)
-            .map(|(handle, buffer)| {
-                buffer.dirty = false;
-                (handle, &buffer.buffer)
-            })
+            .map(|(handle, buffer)| (handle, &buffer.buffer, &mut buffer.dirty))
     }
 }
 
@@ -106,11 +109,20 @@ mod tests {
     }
 
     #[test]
-    fn has_dirty_clears_when_iter_consumed() {
+    fn has_dirty_clears_when_caller_acknowledges() {
         let mut buffers = VatSlotBuffers::<VatMaterialExtension>::default();
         buffers.allocate_slot(Handle::<TestMat>::default());
-        buffers.dirty_buffer_iter().for_each(|_| ());
+        buffers.dirty_buffer_iter().for_each(|(_, _, dirty)| *dirty = false);
         assert!(!buffers.has_dirty());
+    }
+
+    #[test]
+    fn has_dirty_remains_if_caller_does_not_acknowledge() {
+        let mut buffers = VatSlotBuffers::<VatMaterialExtension>::default();
+        buffers.allocate_slot(Handle::<TestMat>::default());
+        // Consume the iterator without clearing dirty (simulates a failed upload).
+        buffers.dirty_buffer_iter().for_each(|_| ());
+        assert!(buffers.has_dirty(), "dirty must stay set so the upload retries next frame");
     }
 
     #[test]
@@ -126,7 +138,7 @@ mod tests {
         let mut buffers = VatSlotBuffers::<VatMaterialExtension>::default();
         let handle = Handle::<TestMat>::default();
         let slot_id = buffers.allocate_slot(handle.clone());
-        buffers.dirty_buffer_iter().for_each(|_| ());
+        buffers.dirty_buffer_iter().for_each(|(_, _, dirty)| *dirty = false);
         assert!(!buffers.has_dirty(), "should be clean after flush");
 
         buffers.update_slot(handle, slot_id, 0.0, make_clip(0, 10));
