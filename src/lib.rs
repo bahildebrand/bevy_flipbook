@@ -22,6 +22,7 @@ use bevy::{mesh::MeshTag, prelude::*, shader::ShaderRef};
 /// Use this in a custom [`MaterialExtension::vertex_shader`] implementation:
 ///
 /// ```rust,no_run
+/// # use bevy::shader::ShaderRef;
 /// fn vertex_shader() -> ShaderRef {
 ///     bevy_flipbook::vat_vertex_shader()
 /// }
@@ -37,12 +38,19 @@ pub fn vat_vertex_shader() -> ShaderRef {
 /// don't need a custom extension:
 ///
 /// ```rust,no_run
-/// app.add_plugins(VatPlugin::default());
+/// # use bevy::prelude::*;
+/// # use bevy_flipbook::{VatPlugin, VatMaterialExtension};
+/// # let mut app = App::new();
+/// app.add_plugins(VatPlugin::<VatMaterialExtension>::default());
 /// ```
 ///
 /// For a custom extension:
 ///
 /// ```rust,no_run
+/// # use bevy::prelude::*;
+/// # use bevy_flipbook::{VatPlugin, VatMaterialExtension};
+/// # type MyExtension = VatMaterialExtension;
+/// # let mut app = App::new();
 /// app.add_plugins(VatPlugin::<MyExtension>::default());
 /// ```
 pub struct VatPlugin<E: MaterialExtension + VatSlotAccess = VatMaterialExtension> {
