@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
+use bevy::{asset::Asset, reflect::Reflect};
 use serde::Deserialize;
 
 /// Top-level structure of a `*-remap_info.json` file produced by OpenVAT.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Asset, Reflect)]
 pub struct RemapInfo {
     #[serde(rename = "os-remap")]
     pub os_remap: OsRemap,
@@ -35,7 +36,7 @@ impl RemapInfo {
 }
 
 /// The `os-remap` block describing the overall bounding box and frame count.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Reflect)]
 pub struct OsRemap {
     #[serde(rename = "Min")]
     pub min: [f32; 3],
@@ -46,7 +47,7 @@ pub struct OsRemap {
 }
 
 /// A single named animation clip.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Reflect)]
 #[serde(rename_all = "camelCase")]
 pub struct AnimationClip {
     pub start_frame: u32,
