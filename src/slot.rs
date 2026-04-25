@@ -4,7 +4,11 @@ use std::collections::HashMap;
 
 use crate::{remap_info::AnimationClip, slot::allocator::SlotAllocator};
 
-use bevy::{pbr::{ExtendedMaterial, MaterialExtension}, prelude::*, render::render_resource::ShaderType};
+use bevy::{
+    pbr::{ExtendedMaterial, MaterialExtension},
+    prelude::*,
+    render::render_resource::ShaderType,
+};
 
 pub(crate) struct VatSlotBuffers<E: MaterialExtension> {
     buffers: HashMap<Handle<ExtendedMaterial<StandardMaterial, E>>, VatSlotBuffer>,
@@ -19,7 +23,10 @@ impl<E: MaterialExtension> Default for VatSlotBuffers<E> {
 }
 
 impl<E: MaterialExtension> VatSlotBuffers<E> {
-    pub fn allocate_slot(&mut self, mat_handle: Handle<ExtendedMaterial<StandardMaterial, E>>) -> u32 {
+    pub fn allocate_slot(
+        &mut self,
+        mat_handle: Handle<ExtendedMaterial<StandardMaterial, E>>,
+    ) -> u32 {
         let buffer = self.buffers.entry(mat_handle).or_default();
 
         let slot_id = buffer.allocator.allocate();
@@ -40,6 +47,7 @@ impl<E: MaterialExtension> VatSlotBuffers<E> {
         slot_id: u32,
         time_offset: f32,
         animation_clip: AnimationClip,
+        rate: f32,
     ) {
         let buffer = self.buffers.get_mut(&mat_handle).unwrap();
         let slot = buffer.buffer.get_mut(slot_id as usize).unwrap();
@@ -47,11 +55,16 @@ impl<E: MaterialExtension> VatSlotBuffers<E> {
         slot.time_offset = time_offset;
         slot.clip_start_frame = animation_clip.start_frame as f32;
         slot.clip_frame_count = animation_clip.frame_count() as f32;
+        slot.rate = rate;
 
         buffer.dirty = true;
     }
 
-    pub fn free_slot(&mut self, mat_handle: Handle<ExtendedMaterial<StandardMaterial, E>>, slot_id: u32) {
+    pub fn free_slot(
+        &mut self,
+        mat_handle: Handle<ExtendedMaterial<StandardMaterial, E>>,
+        slot_id: u32,
+    ) {
         if let Some(buffer) = self.buffers.get_mut(&mat_handle) {
             buffer.allocator.free(slot_id);
         }
@@ -112,7 +125,9 @@ mod tests {
     fn has_dirty_clears_when_caller_acknowledges() {
         let mut buffers = VatSlotBuffers::<VatMaterialExtension>::default();
         buffers.allocate_slot(Handle::<TestMat>::default());
-        buffers.dirty_buffer_iter().for_each(|(_, _, dirty)| *dirty = false);
+        buffers
+            .dirty_buffer_iter()
+            .for_each(|(_, _, dirty)| *dirty = false);
         assert!(!buffers.has_dirty());
     }
 
@@ -122,7 +137,10 @@ mod tests {
         buffers.allocate_slot(Handle::<TestMat>::default());
         // Consume the iterator without clearing dirty (simulates a failed upload).
         buffers.dirty_buffer_iter().for_each(|_| ());
-        assert!(buffers.has_dirty(), "dirty must stay set so the upload retries next frame");
+        assert!(
+            buffers.has_dirty(),
+            "dirty must stay set so the upload retries next frame"
+        );
     }
 
     #[test]
@@ -138,7 +156,9 @@ mod tests {
         let mut buffers = VatSlotBuffers::<VatMaterialExtension>::default();
         let handle = Handle::<TestMat>::default();
         let slot_id = buffers.allocate_slot(handle.clone());
-        buffers.dirty_buffer_iter().for_each(|(_, _, dirty)| *dirty = false);
+        buffers
+            .dirty_buffer_iter()
+            .for_each(|(_, _, dirty)| *dirty = false);
         assert!(!buffers.has_dirty(), "should be clean after flush");
 
         buffers.update_slot(handle, slot_id, 0.0, make_clip(0, 10));
@@ -158,16 +178,16 @@ pub(crate) struct VatSlot {
     pub time_offset: f32,
     pub clip_start_frame: f32,
     pub clip_frame_count: f32,
-    _padding: u32,
+    pub rate: f32,
 }
 
 impl VatSlot {
-    pub fn new(time_offset: f32, clip_start_frame: f32, clip_frame_count: f32) -> Self {
+    pub fn new(time_offset: f32, clip_start_frame: f32, clip_frame_count: f32, rate: f32) -> Self {
         Self {
             time_offset,
             clip_start_frame,
             clip_frame_count,
-            _padding: 0,
+            rate,
         }
     }
 }

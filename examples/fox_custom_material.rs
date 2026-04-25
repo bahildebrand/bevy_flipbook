@@ -173,7 +173,7 @@ fn replace_materials(
 
     for entity in &query {
         let slot_id = vat_handler.allocate_slot(fox_material.0.clone());
-        vat_handler.update_slot(fox_material.0.clone(), slot_id, 0.0, first.1.clone());
+        vat_handler.update_slot(fox_material.0.clone(), slot_id, 0.0, first.1.clone(), 1.0);
         commands
             .entity(entity)
             .remove::<MeshMaterial3d<StandardMaterial>>()
@@ -218,6 +218,7 @@ fn switch_clip(
                 marker.slot_id,
                 time.elapsed_secs(),
                 clip.clone(),
+                1.0,
             );
         }
         info!("Switched to clip: {name}");

@@ -11,8 +11,8 @@ const REMAP_INFO_JSON: &str = include_str!(concat!(
 
 const Y_RESOLUTION_MULTIPLIER: f32 = 2.0;
 
-const GRID_SIZE: usize = 3;
 const FOX_SPACING: f32 = 140.0;
+const RATES: [f32; 3] = [0.5, 1.0, 1.5];
 
 #[derive(Resource)]
 struct FoxMaterial(Handle<VatMaterial>);
@@ -20,10 +20,9 @@ struct FoxMaterial(Handle<VatMaterial>);
 #[derive(Resource)]
 struct FoxRemapInfo(RemapInfo);
 
-/// Marks a scene root with the index of the clip it should play.
 #[derive(Component)]
 struct FoxInstance {
-    clip_index: usize,
+    rate: f32,
 }
 
 fn main() {
@@ -53,10 +52,11 @@ fn setup(
 ) {
     let vat_texture = asset_server.load("models/fox_vat.exr");
     let os = &remap_info.0.os_remap;
-    let clips = remap_info.0.clips_ordered();
-    let first = clips
-        .first()
-        .copied()
+    let first = remap_info
+        .0
+        .clips_ordered()
+        .into_iter()
+        .next()
         .expect("remap_info has no animations");
 
     let slots = buffers.add(ShaderStorageBuffer::new(&[0u8; 4], default()));
@@ -81,19 +81,14 @@ fn setup(
 
     commands.insert_resource(FoxMaterial(material));
 
-    let num_clips = clips.len();
-    let half_extent = (GRID_SIZE as f32 - 1.0) * FOX_SPACING * 0.5;
-    for row in 0..GRID_SIZE {
-        for col in 0..GRID_SIZE {
-            let clip_index = (row * GRID_SIZE + col) % num_clips;
-            let x = col as f32 * FOX_SPACING - half_extent;
-            let z = row as f32 * FOX_SPACING - half_extent;
-            commands.spawn((
-                SceneRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset("models/fox.glb"))),
-                Transform::from_translation(Vec3::new(x, 0.0, z)),
-                FoxInstance { clip_index },
-            ));
-        }
+    let half_extent = (RATES.len() as f32 - 1.0) * FOX_SPACING * 0.5;
+    for (i, &rate) in RATES.iter().enumerate() {
+        let x = i as f32 * FOX_SPACING - half_extent;
+        commands.spawn((
+            SceneRoot(asset_server.load(GltfAssetLabel::Scene(0).from_asset("models/fox.glb"))),
+            Transform::from_translation(Vec3::new(x, 0.0, 0.0)),
+            FoxInstance { rate },
+        ));
     }
 
     commands.spawn((
@@ -105,10 +100,9 @@ fn setup(
         Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -0.8, 0.4, 0.0)),
     ));
 
-    let dist = half_extent + FOX_SPACING * 2.5;
     commands.spawn((
         Camera3d::default(),
-        Transform::from_translation(Vec3::new(0.0, dist * 0.8, dist))
+        Transform::from_translation(Vec3::new(0.0, 120.0, 300.0))
             .looking_at(Vec3::new(0.0, 20.0, 0.0), Vec3::Y),
     ));
 }
@@ -122,16 +116,20 @@ fn replace_materials(
     remap_info: Res<FoxRemapInfo>,
     mut vat_handler: ResMut<VatHandler>,
 ) {
-    let clips = remap_info.0.clips_ordered();
+    let first = remap_info
+        .0
+        .clips_ordered()
+        .into_iter()
+        .next()
+        .expect("remap_info has no animations");
 
     for entity in &query {
         let Some(fox) = find_ancestor(&fox_instances, &parents, entity) else {
             continue;
         };
 
-        let (_, clip) = clips[fox.clip_index % clips.len()];
         let slot_id = vat_handler.allocate_slot(fox_material.0.clone());
-        vat_handler.update_slot(fox_material.0.clone(), slot_id, 0.0, clip.clone(), 1.0);
+        vat_handler.update_slot(fox_material.0.clone(), slot_id, 0.0, first.1.clone(), fox.rate);
 
         commands
             .entity(entity)
@@ -143,7 +141,6 @@ fn replace_materials(
     }
 }
 
-/// Walk up the hierarchy from `entity` looking for a component of type `T`.
 fn find_ancestor<'w, T: Component>(
     query: &'w Query<&T>,
     parents: &Query<&ChildOf>,

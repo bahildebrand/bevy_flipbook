@@ -165,9 +165,10 @@ impl<E: MaterialExtension> VatHandler<E> {
         slot_id: u32,
         time_offset: f32,
         animation_clip: AnimationClip,
+        rate: f32,
     ) {
         self.slot_buffers
-            .update_slot(mat_handle, slot_id, time_offset, animation_clip);
+            .update_slot(mat_handle, slot_id, time_offset, animation_clip, rate);
     }
 
     pub(crate) fn has_dirty(&self) -> bool {

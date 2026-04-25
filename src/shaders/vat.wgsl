@@ -17,7 +17,7 @@ struct VatSlot {
     time_offset: f32,
     clip_start_frame: f32,
     clip_frame_count: f32,
-    _padding: u32,
+    rate: f32
 }
 
 @group(#{MATERIAL_BIND_GROUP}) @binding(100) var vat_texture: texture_2d<f32>;
@@ -45,7 +45,7 @@ fn vertex(in: Vertex) -> VertexOutput {
     let time_offset = slot.time_offset;
 
     // Compute which frame to sample, looping within the clip
-    let elapsed_frames = (globals.time - time_offset) * vat.fps;
+    let elapsed_frames = (globals.time - time_offset) * vat.fps * slot.rate;
 
     let frame = start_frame + (elapsed_frames % frame_count);
 
