@@ -1,9 +1,19 @@
 #import bevy_pbr::{
     mesh_functions,
     view_transformations::position_world_to_clip,
+}
+
+#ifdef PREPASS_PIPELINE
+#import bevy_pbr::prepass_io::VertexOutput;
+#import bevy_render::globals::Globals;
+// In the prepass bind group globals lives at binding 1, not the forward-pass binding 11.
+@group(0) @binding(1) var<uniform> globals: Globals;
+#else
+#import bevy_pbr::{
     forward_io::VertexOutput,
     mesh_view_bindings::globals,
 }
+#endif
 
 struct VatSettings {
     bounds_min: vec3<f32>,
@@ -25,7 +35,28 @@ struct VatSlot {
 @group(#{MATERIAL_BIND_GROUP}) @binding(102) var<uniform> vat: VatSettings;
 @group(#{MATERIAL_BIND_GROUP}) @binding(103) var<storage, read> slots: array<VatSlot>;
 
-
+// In the forward pass the mesh pipeline places attributes as:
+//   POSITION(0), NORMAL(1), UV_0(2), UV_1(3)
+// In the prepass the pipeline places attributes as:
+//   POSITION(0), UV_0(1), UV_1(2), NORMAL(3)
+#ifdef PREPASS_PIPELINE
+struct Vertex {
+    @builtin(instance_index) instance_index: u32,
+    @location(0) position: vec3<f32>,
+#ifdef VERTEX_UVS_A
+    @location(1) uv: vec2<f32>,
+#endif
+#ifdef VERTEX_UVS_B
+    // UV_1 encodes each vertex's column in the VAT texture (baked by OpenVAT)
+    @location(2) uv_vat: vec2<f32>,
+#endif
+#ifdef NORMAL_PREPASS_OR_DEFERRED_PREPASS
+#ifdef VERTEX_NORMALS
+    @location(3) normal: vec3<f32>,
+#endif
+#endif
+}
+#else
 struct Vertex {
     @builtin(instance_index) instance_index: u32,
     @location(0) position: vec3<f32>,
@@ -34,6 +65,7 @@ struct Vertex {
     // UV1: x encodes the vertex's column in the VAT texture (baked by OpenVAT)
     @location(3) uv_vat: vec2<f32>,
 }
+#endif
 
 @vertex
 fn vertex(in: Vertex) -> VertexOutput {
@@ -56,9 +88,25 @@ fn vertex(in: Vertex) -> VertexOutput {
     let blend = fract(frame);
 
     let frame_step = 1.0 / vat.y_resolution;
+
+    // UV_1 encodes the per-vertex column in the VAT texture.
+    // In the prepass pipeline it arrives at location 2 (VERTEX_UVS_B);
+    // in the forward pipeline it arrives at location 3.
+#ifdef PREPASS_PIPELINE
+#ifdef VERTEX_UVS_B
+    let uv_vat = in.uv_vat;
+#else
+    // VAT meshes always export UV_1; this fallback keeps the shader
+    // compilable if somehow UV_1 is absent, producing the rest pose.
+    let uv_vat = vec2<f32>(0.0, 0.0);
+#endif
+#else
+    let uv_vat = in.uv_vat;
+#endif
+
     // Sample at pixel centers (+0.5) to avoid bleeding into adjacent rows
-    let uv_curr = vec2<f32>(in.uv_vat.x, (curr_frame + 0.5) * frame_step);
-    let uv_next = vec2<f32>(in.uv_vat.x, (next_frame + 0.5) * frame_step);
+    let uv_curr = vec2<f32>(uv_vat.x, (curr_frame + 0.5) * frame_step);
+    let uv_next = vec2<f32>(uv_vat.x, (next_frame + 0.5) * frame_step);
 
     let encoded_curr = textureSampleLevel(vat_texture, vat_sampler, uv_curr, 0.0).rgb;
     let encoded_next = textureSampleLevel(vat_texture, vat_sampler, uv_next, 0.0).rgb;
@@ -92,10 +140,20 @@ fn vertex(in: Vertex) -> VertexOutput {
         vec4<f32>(animated_position, 1.0),
     );
     out.position = position_world_to_clip(out.world_position.xyz);
-    out.world_normal = mesh_functions::mesh_normal_local_to_world(animated_normal, in.instance_index);
 
+#ifdef PREPASS_PIPELINE
+    // world_normal only exists in the prepass VertexOutput for normal/deferred passes
+#ifdef NORMAL_PREPASS_OR_DEFERRED_PREPASS
+    out.world_normal = mesh_functions::mesh_normal_local_to_world(animated_normal, in.instance_index);
+#endif
 #ifdef VERTEX_UVS_A
     out.uv = in.uv;
+#endif
+#else
+    out.world_normal = mesh_functions::mesh_normal_local_to_world(animated_normal, in.instance_index);
+#ifdef VERTEX_UVS_A
+    out.uv = in.uv;
+#endif
 #endif
 
     return out;

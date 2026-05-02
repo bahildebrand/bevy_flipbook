@@ -44,6 +44,10 @@ impl MaterialExtension for VatMaterialExtension {
     fn vertex_shader() -> ShaderRef {
         crate::vat_vertex_shader()
     }
+
+    fn prepass_vertex_shader() -> ShaderRef {
+        crate::vat_vertex_shader()
+    }
 }
 
 /// Trait allowing the plugin's slot-buffer system to write the updated

@@ -36,3 +36,7 @@ path = "examples/fox_custom_material.rs"
 [[example]]
 name = "fox_rates"
 path = "examples/fox_rates.rs"
+
+[[example]]
+name = "fox_shadow"
+path = "examples/fox_shadow.rs"
