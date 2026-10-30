@@ -13,7 +13,7 @@ use bevy::{
     light::CascadeShadowConfigBuilder,
     pbr::ExtendedMaterial,
     prelude::*,
-    render::storage::ShaderStorageBuffer,
+    render::storage::ShaderBuffer,
 };
 use bevy_flipbook::{
     VatBundle, VatHandler, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings,
@@ -78,10 +78,10 @@ fn setup(
     mut vat_materials: ResMut<Assets<VatMaterial>>,
     mut std_materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
+    mut buffers: ResMut<Assets<ShaderBuffer>>,
     remap_info: Res<FoxRemapInfo>,
 ) {
-    commands.spawn(SceneRoot(
+    commands.spawn(WorldAssetRoot(
         asset_server.load(GltfAssetLabel::Scene(0).from_asset("models/fox.glb")),
     ));
 
@@ -94,7 +94,7 @@ fn setup(
         .next()
         .expect("remap_info has no animations");
 
-    let slots = buffers.add(ShaderStorageBuffer::new(&[0u8; 4], default()));
+    let slots = buffers.add(ShaderBuffer::new(&[0u8; 4], default()));
     let material = vat_materials.add(ExtendedMaterial {
         base: StandardMaterial {
             base_color: Color::srgb(0.8, 0.7, 0.5),
@@ -125,11 +125,11 @@ fn setup(
     ));
 
     // Directional light angled to cast a long, clearly-visible shadow across
-    // the plane. shadows_enabled must be true to exercise the prepass path.
+    // the plane. shadow_maps_enabled must be true to exercise the prepass path.
     commands.spawn((
         DirectionalLight {
             illuminance: 15_000.0,
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..default()
         },
         Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -0.6, 0.8, 0.0)),

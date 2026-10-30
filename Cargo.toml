@@ -1,12 +1,12 @@
 [package]
 name = "bevy_flipbook"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 description = "OpenVAT vertex animation texture rendering for Bevy"
 license = "MIT"
 
 [dependencies]
-bevy = { version = "0.18", default-features = false, features = [
+bevy = { version = "0.19", default-features = false, features = [
     "bevy_asset",
     "bevy_image",
     "bevy_pbr",
@@ -15,7 +15,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 [dev-dependencies]
-bevy = { version = "0.18", features = ["exr"] }
+bevy = { version = "0.19", features = ["exr"] }
 
 [[example]]
 name = "fox"

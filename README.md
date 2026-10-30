@@ -1,7 +1,7 @@
 # 🎞️ bevy_flipbook
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Bevy](https://img.shields.io/badge/Bevy-0.18-232326)](https://bevyengine.org)
+[![Bevy](https://img.shields.io/badge/Bevy-0.19-232326)](https://bevyengine.org)
 
 GPU-driven vertex animation texture (VAT) playback for [Bevy](https://bevyengine.org), designed for use with [OpenVAT](https://github.com/sharpen3d/openvat)-baked assets.
 
@@ -22,7 +22,7 @@ Bake your Blender animations into a single texture, load the mesh once, and let 
 ```rust
 use bevy::prelude::*;
 use bevy::pbr::ExtendedMaterial;
-use bevy::render::storage::ShaderStorageBuffer;
+use bevy::render::storage::ShaderBuffer;
 use bevy_flipbook::{
     VatBundle, VatHandler, VatMaterial, VatMaterialExtension,
     VatPlugin, VatSettings, remap_info::RemapInfo,
@@ -40,10 +40,10 @@ fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut vat_materials: ResMut<Assets<VatMaterial>>,
-    mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
+    mut buffers: ResMut<Assets<ShaderBuffer>>,
 ) {
     // Load your GLTF mesh (rest pose) and the baked VAT texture
-    commands.spawn(SceneRoot(
+    commands.spawn(WorldAssetRoot(
         asset_server.load(GltfAssetLabel::Scene(0).from_asset("models/fox.glb")),
     ));
 
@@ -55,7 +55,7 @@ fn setup(
     ).unwrap();
 
     let os = &remap.os_remap;
-    let slots = buffers.add(ShaderStorageBuffer::new(&[0u8; 4], default()));
+    let slots = buffers.add(ShaderBuffer::new(&[0u8; 4], default()));
 
     let material = vat_materials.add(ExtendedMaterial {
         base: StandardMaterial::default(),
@@ -147,7 +147,7 @@ Your struct must redeclare the VAT bind group bindings at the **same indices** t
 ```rust
 use bevy::prelude::*;
 use bevy::pbr::{MaterialExtension, ExtendedMaterial};
-use bevy::render::storage::ShaderStorageBuffer;
+use bevy::render::storage::ShaderBuffer;
 use bevy_flipbook::{VatSettings, VatSlotAccess, vat_vertex_shader};
 
 #[derive(Asset, AsBindGroup, TypePath, Debug, Clone)]
@@ -161,7 +161,7 @@ pub struct MyExtension {
     pub settings: VatSettings,
 
     #[storage(103, read_only)]
-    pub slots: Handle<ShaderStorageBuffer>,
+    pub slots: Handle<ShaderBuffer>,
 
     // --- Your custom bindings start here ---
     #[uniform(104)]
@@ -180,7 +180,7 @@ impl MaterialExtension for MyExtension {
 }
 
 impl VatSlotAccess for MyExtension {
-    fn set_slots(&mut self, slots: Handle<ShaderStorageBuffer>) {
+    fn set_slots(&mut self, slots: Handle<ShaderBuffer>) {
         self.slots = slots;
     }
 }
@@ -239,9 +239,9 @@ fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<MyMaterial>>,
-    mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
+    mut buffers: ResMut<Assets<ShaderBuffer>>,
 ) {
-    let slots = buffers.add(ShaderStorageBuffer::new(&[0u8; 4], default()));
+    let slots = buffers.add(ShaderBuffer::new(&[0u8; 4], default()));
 
     let material = materials.add(ExtendedMaterial {
         base: StandardMaterial::default(),
@@ -283,6 +283,7 @@ cargo run --example <name>
 
 | bevy_flipbook | Bevy |
 |:---:|:---:|
+| 0.2 | 0.19 |
 | 0.1 | 0.18 |
 
 ## License

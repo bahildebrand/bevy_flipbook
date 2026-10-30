@@ -161,7 +161,7 @@ mod tests {
             .for_each(|(_, _, dirty)| *dirty = false);
         assert!(!buffers.has_dirty(), "should be clean after flush");
 
-        buffers.update_slot(handle, slot_id, 0.0, make_clip(0, 10));
+        buffers.update_slot(handle, slot_id, 0.0, make_clip(0, 10), 1.0);
         assert!(buffers.has_dirty(), "should be dirty after update_slot");
     }
 }

@@ -6,7 +6,7 @@
 use bevy::{
     pbr::{ExtendedMaterial, MaterialExtension},
     prelude::*,
-    render::{render_resource::AsBindGroup, storage::ShaderStorageBuffer},
+    render::{render_resource::AsBindGroup, storage::ShaderBuffer},
     shader::ShaderRef,
 };
 use bevy_flipbook::{
@@ -36,7 +36,7 @@ struct CustomVatExtension {
     settings: VatSettings,
 
     #[storage(103, read_only)]
-    slots: Handle<ShaderStorageBuffer>,
+    slots: Handle<ShaderBuffer>,
 }
 
 impl MaterialExtension for CustomVatExtension {
@@ -46,7 +46,7 @@ impl MaterialExtension for CustomVatExtension {
 }
 
 impl VatSlotAccess for CustomVatExtension {
-    fn set_slots(&mut self, slots: Handle<ShaderStorageBuffer>) {
+    fn set_slots(&mut self, slots: Handle<ShaderBuffer>) {
         self.slots = slots;
     }
 }
@@ -104,10 +104,10 @@ fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut materials: ResMut<Assets<CustomVatMaterial>>,
-    mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
+    mut buffers: ResMut<Assets<ShaderBuffer>>,
     remap_info: Res<FoxRemapInfo>,
 ) {
-    commands.spawn(SceneRoot(
+    commands.spawn(WorldAssetRoot(
         asset_server.load(GltfAssetLabel::Scene(0).from_asset("models/fox.glb")),
     ));
 
@@ -121,7 +121,7 @@ fn setup(
         .next()
         .expect("remap_info has no animations");
 
-    let slots = buffers.add(ShaderStorageBuffer::new(&[0u8; 4], default()));
+    let slots = buffers.add(ShaderBuffer::new(&[0u8; 4], default()));
 
     let material = materials.add(ExtendedMaterial {
         base: StandardMaterial {
@@ -146,7 +146,7 @@ fn setup(
     commands.spawn((
         DirectionalLight {
             illuminance: 10_000.0,
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..default()
         },
         Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -0.8, 0.4, 0.0)),

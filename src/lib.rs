@@ -11,7 +11,7 @@ use crate::{
 };
 use bevy::ecs::{lifecycle::HookContext, world::DeferredWorld};
 use bevy::pbr::{ExtendedMaterial, MaterialExtension};
-use bevy::render::{render_resource::AsBindGroup, storage::ShaderStorageBuffer};
+use bevy::render::{render_resource::AsBindGroup, storage::ShaderBuffer};
 pub use material::{VatMaterial, VatMaterialExtension, VatSettings, VatSlotAccess};
 
 use bevy::{mesh::MeshTag, prelude::*, shader::ShaderRef};
@@ -195,11 +195,11 @@ fn vat_has_dirty<E: MaterialExtension>(vat_handler: Res<VatHandler<E>>) -> bool 
 fn update_slot_buffers<E: MaterialExtension + VatSlotAccess>(
     mut vat_handler: ResMut<VatHandler<E>>,
     mut vat_mats: ResMut<Assets<ExtendedMaterial<StandardMaterial, E>>>,
-    mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
+    mut buffers: ResMut<Assets<ShaderBuffer>>,
 ) {
     for (handle, buffer, dirty) in vat_handler.dirty_buffer_iter() {
-        if let Some(material) = vat_mats.get_mut(handle) {
-            let storage_buffer = ShaderStorageBuffer::from(buffer.clone());
+        if let Some(mut material) = vat_mats.get_mut(handle) {
+            let storage_buffer = ShaderBuffer::from(buffer.clone());
             let buffer_handle = buffers.add(storage_buffer);
             material.extension.set_slots(buffer_handle);
             // Clear dirty only after a successful upload. If get_mut returned

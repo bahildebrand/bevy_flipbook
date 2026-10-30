@@ -3,7 +3,7 @@ use bevy::{
     prelude::*,
     render::{
         render_resource::{AsBindGroup, ShaderType},
-        storage::ShaderStorageBuffer,
+        storage::ShaderBuffer,
     },
     shader::ShaderRef,
 };
@@ -23,14 +23,14 @@ pub struct VatMaterialExtension {
     pub settings: VatSettings,
 
     #[storage(103, read_only)]
-    pub slots: Handle<ShaderStorageBuffer>,
+    pub slots: Handle<ShaderBuffer>,
 }
 
 impl VatMaterialExtension {
     pub fn new(
         vat_texture: Handle<Image>,
         settings: VatSettings,
-        slots: Handle<ShaderStorageBuffer>,
+        slots: Handle<ShaderBuffer>,
     ) -> Self {
         Self {
             vat_texture,
@@ -51,17 +51,17 @@ impl MaterialExtension for VatMaterialExtension {
 }
 
 /// Trait allowing the plugin's slot-buffer system to write the updated
-/// [`ShaderStorageBuffer`] handle into any [`MaterialExtension`] that contains
+/// [`ShaderBuffer`] handle into any [`MaterialExtension`] that contains
 /// VAT slot data.
 ///
 /// Implement this on your own extension type if you wrap or compose
 /// [`VatMaterialExtension`] with a custom fragment shader.
 pub trait VatSlotAccess {
-    fn set_slots(&mut self, slots: Handle<ShaderStorageBuffer>);
+    fn set_slots(&mut self, slots: Handle<ShaderBuffer>);
 }
 
 impl VatSlotAccess for VatMaterialExtension {
-    fn set_slots(&mut self, slots: Handle<ShaderStorageBuffer>) {
+    fn set_slots(&mut self, slots: Handle<ShaderBuffer>) {
         self.slots = slots;
     }
 }

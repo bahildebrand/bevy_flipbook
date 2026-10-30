@@ -1,4 +1,4 @@
-use bevy::{pbr::ExtendedMaterial, prelude::*, render::storage::ShaderStorageBuffer};
+use bevy::{pbr::ExtendedMaterial, prelude::*, render::storage::ShaderBuffer};
 use bevy_flipbook::{
     VatBundle, VatHandler, VatMarker, VatMaterial, VatMaterialExtension, VatPlugin, VatSettings,
     remap_info::RemapInfo,
@@ -59,10 +59,10 @@ fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut vat_materials: ResMut<Assets<VatMaterial>>,
-    mut buffers: ResMut<Assets<ShaderStorageBuffer>>,
+    mut buffers: ResMut<Assets<ShaderBuffer>>,
     remap_info: Res<FoxRemapInfo>,
 ) {
-    commands.spawn(SceneRoot(
+    commands.spawn(WorldAssetRoot(
         asset_server.load(GltfAssetLabel::Scene(0).from_asset("models/fox.glb")),
     ));
 
@@ -76,7 +76,7 @@ fn setup(
         .next()
         .expect("remap_info has no animations");
 
-    let slots = buffers.add(ShaderStorageBuffer::new(&[0u8; 4], default()));
+    let slots = buffers.add(ShaderBuffer::new(&[0u8; 4], default()));
 
     let material = vat_materials.add(ExtendedMaterial {
         base: StandardMaterial {
@@ -101,7 +101,7 @@ fn setup(
     commands.spawn((
         DirectionalLight {
             illuminance: 10_000.0,
-            shadows_enabled: true,
+            shadow_maps_enabled: true,
             ..default()
         },
         Transform::from_rotation(Quat::from_euler(EulerRot::XYZ, -0.8, 0.4, 0.0)),
